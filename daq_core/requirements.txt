@@ -1,0 +1,2 @@
+# DAQ Core 依赖
+paho-mqtt>=2.0.0

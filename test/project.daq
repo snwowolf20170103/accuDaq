@@ -1,0 +1,163 @@
+{
+  "meta": {
+    "name": "New Project",
+    "version": "1.0.0",
+    "schemaVersion": "0.1.0"
+  },
+  "devices": [],
+  "logic": {
+    "nodes": [
+      {
+        "id": "f328329b-505a-4dd5-9c3a-b0a5be263a35",
+        "type": "daq:mock_device",
+        "label": "Mock Device",
+        "position": {
+          "x": 234,
+          "y": 147
+        },
+        "properties": {
+          "wave_type": "sine",
+          "amplitude": 20,
+          "offset": 100,
+          "frequency": 0.1,
+          "interval_ms": 1000,
+          "device_name": "Sensor01",
+          "broker_host": "localhost",
+          "broker_port": 1883,
+          "topic": "accudaq/demo/sensor"
+        }
+      },
+      {
+        "id": "3f88b6ca-6566-476a-a185-951c99c31d10",
+        "type": "daq:math",
+        "label": "Math Operation",
+        "position": {
+          "x": 849,
+          "y": 395
+        },
+        "properties": {
+          "operation": "scale",
+          "scale": 1,
+          "offset": 0,
+          "threshold": 100
+        }
+      },
+      {
+        "id": "b1dea841-9181-46bd-b1aa-5278e3880f37",
+        "type": "daq:csv_storage",
+        "label": "CSV Storage",
+        "position": {
+          "x": 1258,
+          "y": 147
+        },
+        "properties": {
+          "file_path": "./test/mqtt_data.csv",
+          "append_mode": false,
+          "include_timestamp": true,
+          "flush_interval": 1
+        }
+      },
+      {
+        "id": "05eef0bb-201f-42d3-a505-b6313812820d",
+        "type": "daq:mqtt_subscribe",
+        "label": "MQTT Subscribe",
+        "position": {
+          "x": 234,
+          "y": 642
+        },
+        "properties": {
+          "broker_host": "localhost",
+          "broker_port": 1883,
+          "topic": "accudaq/demo/sensor"
+        }
+      },
+      {
+        "id": "2578fd19-ab2d-423b-b7db-749c3f6ad688",
+        "type": "daq:compare",
+        "label": "Compare",
+        "position": {
+          "x": 644,
+          "y": 642
+        },
+        "properties": {
+          "compare_type": "greater",
+          "tolerance": 0.0001
+        }
+      },
+      {
+        "id": "cd13330d-4eb8-4008-a66f-d20a41286a7a",
+        "type": "daq:mqtt_publish",
+        "label": "MQTT Publish",
+        "position": {
+          "x": 1258,
+          "y": 642
+        },
+        "properties": {
+          "broker_host": "localhost",
+          "broker_port": 1883,
+          "topic": "accudaq/demo/output"
+        }
+      }
+    ],
+    "wires": [
+      {
+        "id": "xy-edge__f328329b-505a-4dd5-9c3a-b0a5be263a35value-3f88b6ca-6566-476a-a185-951c99c31d10input1",
+        "source": {
+          "nodeId": "f328329b-505a-4dd5-9c3a-b0a5be263a35",
+          "portId": "value"
+        },
+        "target": {
+          "nodeId": "3f88b6ca-6566-476a-a185-951c99c31d10",
+          "portId": "input1"
+        }
+      },
+      {
+        "id": "xy-edge__3f88b6ca-6566-476a-a185-951c99c31d10result-b1dea841-9181-46bd-b1aa-5278e3880f37value",
+        "source": {
+          "nodeId": "3f88b6ca-6566-476a-a185-951c99c31d10",
+          "portId": "result"
+        },
+        "target": {
+          "nodeId": "b1dea841-9181-46bd-b1aa-5278e3880f37",
+          "portId": "value"
+        }
+      },
+      {
+        "id": "xy-edge__05eef0bb-201f-42d3-a505-b6313812820ddata-2578fd19-ab2d-423b-b7db-749c3f6ad688input1",
+        "source": {
+          "nodeId": "05eef0bb-201f-42d3-a505-b6313812820d",
+          "portId": "data"
+        },
+        "target": {
+          "nodeId": "2578fd19-ab2d-423b-b7db-749c3f6ad688",
+          "portId": "input1"
+        }
+      },
+      {
+        "id": "xy-edge__2578fd19-ab2d-423b-b7db-749c3f6ad688result-cd13330d-4eb8-4008-a66f-d20a41286a7adata",
+        "source": {
+          "nodeId": "2578fd19-ab2d-423b-b7db-749c3f6ad688",
+          "portId": "result"
+        },
+        "target": {
+          "nodeId": "cd13330d-4eb8-4008-a66f-d20a41286a7a",
+          "portId": "data"
+        }
+      },
+      {
+        "id": "xy-edge__3f88b6ca-6566-476a-a185-951c99c31d10exceeded-b1dea841-9181-46bd-b1aa-5278e3880f37enable",
+        "source": {
+          "nodeId": "3f88b6ca-6566-476a-a185-951c99c31d10",
+          "portId": "exceeded"
+        },
+        "target": {
+          "nodeId": "b1dea841-9181-46bd-b1aa-5278e3880f37",
+          "portId": "enable"
+        }
+      }
+    ]
+  },
+  "ui": {
+    "widgets": []
+  }
+}

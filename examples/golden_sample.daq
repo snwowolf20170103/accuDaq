@@ -1,0 +1,121 @@
+{
+    "meta": {
+        "name": "温度监控演示",
+        "description": "MQTT 温度传感器数据采集、处理和存储示例",
+        "version": "1.0.0",
+        "schemaVersion": "0.1.0"
+    },
+    "devices": [
+        {
+            "id": "temp_sensor_01",
+            "name": "温度传感器 01",
+            "protocol": "mock_device",
+            "config": {
+                "broker_host": "localhost",
+                "broker_port": 1883,
+                "topic": "sensors/temperature"
+            }
+        }
+    ],
+    "logic": {
+        "nodes": [
+            {
+                "id": "mock_temp",
+                "type": "daq:mock_device",
+                "label": "模拟温度传感器",
+                "position": { "x": 100, "y": 100 },
+                "properties": {
+                    "broker_host": "localhost",
+                    "broker_port": 1883,
+                    "topic": "sensors/temperature",
+                    "wave_type": "sine",
+                    "amplitude": 10,
+                    "offset": 25,
+                    "frequency": 0.05,
+                    "interval_ms": 1000,
+                    "device_name": "TempSensor01",
+                    "unit": "°C"
+                }
+            },
+            {
+                "id": "mqtt_sub",
+                "type": "daq:mqtt_subscribe",
+                "label": "MQTT 订阅",
+                "position": { "x": 300, "y": 100 },
+                "properties": {
+                    "broker_host": "localhost",
+                    "broker_port": 1883,
+                    "topic": "sensors/temperature"
+                }
+            },
+            {
+                "id": "celsius_to_fahrenheit",
+                "type": "daq:math",
+                "label": "摄氏度转华氏度",
+                "position": { "x": 500, "y": 100 },
+                "properties": {
+                    "operation": "scale",
+                    "scale": 1.8,
+                    "offset": 32,
+                    "threshold": 100
+                }
+            },
+            {
+                "id": "csv_logger",
+                "type": "daq:csv_storage",
+                "label": "CSV 记录",
+                "position": { "x": 700, "y": 100 },
+                "properties": {
+                    "file_path": "./data/temperature_log.csv",
+                    "include_timestamp": true,
+                    "flush_interval": 5
+                }
+            }
+        ],
+        "wires": [
+            {
+                "id": "wire_1",
+                "source": { "nodeId": "mqtt_sub", "portId": "data" },
+                "target": { "nodeId": "celsius_to_fahrenheit", "portId": "input1" }
+            },
+            {
+                "id": "wire_2",
+                "source": { "nodeId": "celsius_to_fahrenheit", "portId": "result" },
+                "target": { "nodeId": "csv_logger", "portId": "value" }
+            }
+        ]
+    },
+    "ui": {
+        "widgets": [
+            {
+                "id": "temp_gauge",
+                "type": "ui:gauge",
+                "label": "当前温度",
+                "layout": { "x": 0, "y": 0, "w": 4, "h": 3 },
+                "binding": {
+                    "nodeId": "celsius_to_fahrenheit",
+                    "portId": "result"
+                },
+                "properties": {
+                    "min": 0,
+                    "max": 150,
+                    "unit": "°F"
+                }
+            },
+            {
+                "id": "temp_chart",
+                "type": "ui:chart",
+                "label": "温度趋势",
+                "layout": { "x": 4, "y": 0, "w": 8, "h": 3 },
+                "binding": {
+                    "nodeId": "celsius_to_fahrenheit",
+                    "portId": "result"
+                },
+                "properties": {
+                    "chartType": "line",
+                    "dataPoints": 60
+                }
+            }
+        ]
+    }
+}

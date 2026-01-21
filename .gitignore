@@ -1,0 +1,45 @@
+# Dependencies
+node_modules/
+jspm_packages/
+venv/
+.venv/
+env/
+.env
+
+# Build outputs
+dist/
+build/
+out/
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Python caches
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.coverage
+htmlcov/
+
+# IDEs and Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# Agent/Tool specific
+.agent/
+.kiro/
+.claude/
+.windsurf/
+.gemini/
+
+# Project specific data
+data/*.csv
+mqtt_realtime_output.csv
+run_realtime_app.py
+test_realtime.daq

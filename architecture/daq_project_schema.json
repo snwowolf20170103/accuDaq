@@ -1,0 +1,251 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "DAQ Project File",
+    "description": "Schema for .daq project files, defining devices, logic graph, and UI dashboard.",
+    "type": "object",
+    "required": [
+        "meta",
+        "devices",
+        "logic",
+        "ui"
+    ],
+    "properties": {
+        "meta": {
+            "type": "object",
+            "required": [
+                "name",
+                "version",
+                "schemaVersion"
+            ],
+            "properties": {
+                "name": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "version": {
+                    "type": "string"
+                },
+                "schemaVersion": {
+                    "type": "string",
+                    "enum": [
+                        "0.1.0"
+                    ]
+                }
+            }
+        },
+        "devices": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "required": [
+                    "id",
+                    "name",
+                    "protocol",
+                    "config"
+                ],
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "description": "Unique ID for referencing in nodes"
+                    },
+                    "name": {
+                        "type": "string",
+                        "description": "User-friendly name"
+                    },
+                    "protocol": {
+                        "type": "string",
+                        "enum": [
+                            "modbus_tcp",
+                            "mock_device",
+                            "serial",
+                            "ethernet_ip"
+                        ]
+                    },
+                    "config": {
+                        "type": "object",
+                        "additionalProperties": true,
+                        "description": "Protocol specific configuration (IP, Port, etc.)"
+                    }
+                }
+            }
+        },
+        "logic": {
+            "type": "object",
+            "required": [
+                "nodes",
+                "wires"
+            ],
+            "properties": {
+                "nodes": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "required": [
+                            "id",
+                            "type",
+                            "position"
+                        ],
+                        "properties": {
+                            "id": {
+                                "type": "string"
+                            },
+                            "type": {
+                                "type": "string",
+                                "description": "Component type identifier, e.g., 'daq:modbus_read'"
+                            },
+                            "label": {
+                                "type": "string",
+                                "description": "User-defined label on canvas"
+                            },
+                            "position": {
+                                "type": "object",
+                                "required": [
+                                    "x",
+                                    "y"
+                                ],
+                                "properties": {
+                                    "x": {
+                                        "type": "number"
+                                    },
+                                    "y": {
+                                        "type": "number"
+                                    }
+                                }
+                            },
+                            "properties": {
+                                "type": "object",
+                                "description": "Static configuration parameters for the node",
+                                "additionalProperties": true
+                            }
+                        }
+                    }
+                },
+                "wires": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "required": [
+                            "id",
+                            "source",
+                            "target"
+                        ],
+                        "properties": {
+                            "id": {
+                                "type": "string"
+                            },
+                            "source": {
+                                "type": "object",
+                                "required": [
+                                    "nodeId",
+                                    "portId"
+                                ],
+                                "properties": {
+                                    "nodeId": {
+                                        "type": "string"
+                                    },
+                                    "portId": {
+                                        "type": "string"
+                                    }
+                                }
+                            },
+                            "target": {
+                                "type": "object",
+                                "required": [
+                                    "nodeId",
+                                    "portId"
+                                ],
+                                "properties": {
+                                    "nodeId": {
+                                        "type": "string"
+                                    },
+                                    "portId": {
+                                        "type": "string"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "ui": {
+            "type": "object",
+            "required": [
+                "widgets"
+            ],
+            "properties": {
+                "widgets": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "required": [
+                            "id",
+                            "type",
+                            "layout"
+                        ],
+                        "properties": {
+                            "id": {
+                                "type": "string"
+                            },
+                            "type": {
+                                "type": "string",
+                                "enum": [
+                                    "ui:label",
+                                    "ui:gauge",
+                                    "ui:chart",
+                                    "ui:led",
+                                    "ui:button",
+                                    "ui:input"
+                                ]
+                            },
+                            "label": {
+                                "type": "string"
+                            },
+                            "layout": {
+                                "type": "object",
+                                "required": [
+                                    "x",
+                                    "y",
+                                    "w",
+                                    "h"
+                                ],
+                                "properties": {
+                                    "x": {
+                                        "type": "integer"
+                                    },
+                                    "y": {
+                                        "type": "integer"
+                                    },
+                                    "w": {
+                                        "type": "integer"
+                                    },
+                                    "h": {
+                                        "type": "integer"
+                                    }
+                                }
+                            },
+                            "binding": {
+                                "type": "object",
+                                "description": "Data binding configuration",
+                                "properties": {
+                                    "nodeId": {
+                                        "type": "string"
+                                    },
+                                    "portId": {
+                                        "type": "string"
+                                    }
+                                }
+                            },
+                            "properties": {
+                                "type": "object",
+                                "additionalProperties": true
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

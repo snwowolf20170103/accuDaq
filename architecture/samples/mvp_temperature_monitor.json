@@ -1,0 +1,148 @@
+{
+    "meta": {
+        "name": "MVP Temperature Monitor",
+        "description": "A simple temperature monitoring setup with an alarm.",
+        "version": "1.0.0",
+        "schemaVersion": "0.1.0"
+    },
+    "devices": [
+        {
+            "id": "dev_mock_01",
+            "name": "Virtual Temp Sensor",
+            "protocol": "mock_device",
+            "config": {
+                "function": "sine_wave",
+                "min": 20,
+                "max": 40,
+                "period_sec": 10
+            }
+        }
+    ],
+    "logic": {
+        "nodes": [
+            {
+                "id": "node_read_01",
+                "type": "daq:mock_read",
+                "label": "Read Temp",
+                "position": {
+                    "x": 100,
+                    "y": 150
+                },
+                "properties": {
+                    "deviceId": "dev_mock_01",
+                    "dataType": "float"
+                }
+            },
+            {
+                "id": "node_const_01",
+                "type": "math:constant",
+                "label": "Threshold",
+                "position": {
+                    "x": 100,
+                    "y": 300
+                },
+                "properties": {
+                    "value": 30.0
+                }
+            },
+            {
+                "id": "node_cmp_01",
+                "type": "logic:greater_than",
+                "label": "Is Overheating?",
+                "position": {
+                    "x": 400,
+                    "y": 200
+                },
+                "properties": {}
+            },
+            {
+                "id": "node_debug_01",
+                "type": "sys:debug_print",
+                "label": "Log",
+                "position": {
+                    "x": 600,
+                    "y": 350
+                },
+                "properties": {}
+            }
+        ],
+        "wires": [
+            {
+                "id": "wire_1",
+                "source": {
+                    "nodeId": "node_read_01",
+                    "portId": "out"
+                },
+                "target": {
+                    "nodeId": "node_cmp_01",
+                    "portId": "in_a"
+                }
+            },
+            {
+                "id": "wire_2",
+                "source": {
+                    "nodeId": "node_const_01",
+                    "portId": "out"
+                },
+                "target": {
+                    "nodeId": "node_cmp_01",
+                    "portId": "in_b"
+                }
+            },
+            {
+                "id": "wire_3",
+                "source": {
+                    "nodeId": "node_read_01",
+                    "portId": "out"
+                },
+                "target": {
+                    "nodeId": "node_debug_01",
+                    "portId": "in"
+                }
+            }
+        ]
+    },
+    "ui": {
+        "widgets": [
+            {
+                "id": "chart_temperature",
+                "type": "ui:chart",
+                "label": "Temperature History",
+                "layout": {
+                    "x": 0,
+                    "y": 0,
+                    "w": 6,
+                    "h": 4
+                },
+                "binding": {
+                    "nodeId": "node_read_01",
+                    "portId": "out"
+                },
+                "properties": {
+                    "yMin": 0,
+                    "yMax": 50,
+                    "color": "#00AAFF"
+                }
+            },
+            {
+                "id": "led_alarm",
+                "type": "ui:led",
+                "label": "Overheat Alarm",
+                "layout": {
+                    "x": 6,
+                    "y": 0,
+                    "w": 2,
+                    "h": 2
+                },
+                "binding": {
+                    "nodeId": "node_cmp_01",
+                    "portId": "out"
+                },
+                "properties": {
+                    "offColor": "#00AA00",
+                    "onColor": "#FF0000"
+                }
+            }
+        ]
+    }
+}

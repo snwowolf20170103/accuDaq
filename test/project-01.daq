@@ -1,0 +1,141 @@
+{
+  "meta": {
+    "name": "New Project",
+    "version": "1.0.0",
+    "schemaVersion": "0.1.0"
+  },
+  "devices": [],
+  "logic": {
+    "nodes": [
+      {
+        "id": "cdb8afe6-22ff-4ee9-9174-f75238801757",
+        "type": "daq:mock_device",
+        "label": "Mock Device",
+        "position": {
+          "x": -81,
+          "y": 50
+        },
+        "properties": {
+          "wave_type": "sine",
+          "amplitude": 10,
+          "offset": 25,
+          "frequency": 0.1,
+          "interval_ms": 1000,
+          "device_name": "Sensor01",
+          "broker_host": "localhost",
+          "broker_port": 1883,
+          "topic": "accudaq/demo/sensor"
+        }
+      },
+      {
+        "id": "c7ce8372-5182-41ab-a2e6-b494dfa71af1",
+        "type": "daq:mqtt_subscribe",
+        "label": "MQTT Subscribe",
+        "position": {
+          "x": -81,
+          "y": 300
+        },
+        "properties": {
+          "broker_host": "localhost",
+          "broker_port": 1883,
+          "topic": "accudaq/demo/sensor"
+        }
+      },
+      {
+        "id": "ec8a5078-4134-4693-8318-078164c724f7",
+        "type": "daq:math",
+        "label": "Math Operation",
+        "position": {
+          "x": 220,
+          "y": 50
+        },
+        "properties": {
+          "operation": "scale",
+          "scale": 1,
+          "offset": 0,
+          "threshold": 100
+        }
+      },
+      {
+        "id": "7223c61e-d3f9-41ed-ad58-bf2e1a5c4a09",
+        "type": "daq:compare",
+        "label": "Compare",
+        "position": {
+          "x": 220,
+          "y": 300
+        },
+        "properties": {
+          "compare_type": "greater",
+          "tolerance": 0.0001
+        }
+      },
+      {
+        "id": "91944de3-3b78-47f8-b2a5-fe367208c04e",
+        "type": "daq:csv_storage",
+        "label": "CSV Storage",
+        "position": {
+          "x": 519,
+          "y": 50
+        },
+        "properties": {
+          "file_path": "./data/output.csv",
+          "append_mode": true,
+          "include_timestamp": true,
+          "flush_interval": 10
+        }
+      },
+      {
+        "id": "2cc5c90a-36c7-4b74-8b91-51675d845430",
+        "type": "daq:mqtt_publish",
+        "label": "MQTT Publish",
+        "position": {
+          "x": 480,
+          "y": 320
+        },
+        "properties": {
+          "broker_host": "localhost",
+          "broker_port": 1883,
+          "topic": "accudaq/demo/output"
+        }
+      }
+    ],
+    "wires": [
+      {
+        "id": "xy-edge__c7ce8372-5182-41ab-a2e6-b494dfa71af1data-ec8a5078-4134-4693-8318-078164c724f7input1",
+        "source": {
+          "nodeId": "c7ce8372-5182-41ab-a2e6-b494dfa71af1",
+          "portId": "data"
+        },
+        "target": {
+          "nodeId": "ec8a5078-4134-4693-8318-078164c724f7",
+          "portId": "input1"
+        }
+      },
+      {
+        "id": "xy-edge__ec8a5078-4134-4693-8318-078164c724f7result-7223c61e-d3f9-41ed-ad58-bf2e1a5c4a09input1",
+        "source": {
+          "nodeId": "ec8a5078-4134-4693-8318-078164c724f7",
+          "portId": "result"
+        },
+        "target": {
+          "nodeId": "7223c61e-d3f9-41ed-ad58-bf2e1a5c4a09",
+          "portId": "input1"
+        }
+      },
+      {
+        "id": "xy-edge__7223c61e-d3f9-41ed-ad58-bf2e1a5c4a09result-91944de3-3b78-47f8-b2a5-fe367208c04evalue",
+        "source": {
+          "nodeId": "7223c61e-d3f9-41ed-ad58-bf2e1a5c4a09",
+          "portId": "result"
+        },
+        "target": {
+          "nodeId": "91944de3-3b78-47f8-b2a5-fe367208c04e",
+          "portId": "value"
+        }
+      }
+    ]
+  },
+  "ui": {
+    "widgets": []
+  }
+}
