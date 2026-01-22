@@ -93,6 +93,63 @@ const BlocklyEditor = ({
             }
         }
 
+        const categoryColors = new Map<string, string>();
+        (daqToolboxConfig.contents as Array<{ kind: string; name?: string; colour?: string }>).forEach(
+            (item) => {
+                if (item.kind === 'category' && item.name && item.colour) {
+                    categoryColors.set(item.name, item.colour);
+                }
+            }
+        );
+
+        const applyToolboxCategoryColors = () => {
+            if (!blocklyDiv.current) return;
+            const categories = blocklyDiv.current.querySelectorAll<HTMLElement>('.blocklyToolboxCategory');
+            categories.forEach((category) => {
+                const label = category.getAttribute('aria-label')?.trim()
+                    || category.querySelector('.blocklyToolboxCategoryLabel')?.textContent?.trim()
+                    || '';
+                if (!label) return;
+                const color = categoryColors.get(label);
+                if (!color) return;
+                const row = category.querySelector<HTMLElement>('.blocklyTreeRow') || category;
+                const isHex = color.startsWith('#') && color.length === 7;
+                const accentStrong = isHex ? `${color}cc` : color;
+                const accentSoft = isHex ? `${color}55` : color;
+                row.style.setProperty('--toolbox-accent', color);
+                row.style.setProperty('--toolbox-accent-strong', accentStrong);
+                row.style.setProperty('--toolbox-accent-soft', accentSoft);
+                row.style.background = `linear-gradient(90deg, ${accentStrong}, ${accentSoft})`;
+                row.style.borderLeft = `6px solid ${color}`;
+            });
+        };
+
+        const resizeWorkspace = () => {
+            if (workspaceRef.current) {
+                Blockly.svgResize(workspaceRef.current);
+                const toolbox = workspaceRef.current.getToolbox?.();
+                if (toolbox && typeof (toolbox as any).refreshSelection === 'function') {
+                    (toolbox as any).refreshSelection();
+                }
+                if (toolbox && typeof (toolbox as any).setVisible === 'function') {
+                    (toolbox as any).setVisible(true);
+                }
+                applyToolboxCategoryColors();
+            }
+        };
+
+        resizeWorkspace();
+
+        let resizeObserver: ResizeObserver | null = null;
+        if (typeof ResizeObserver !== 'undefined') {
+            resizeObserver = new ResizeObserver(() => {
+                resizeWorkspace();
+            });
+            resizeObserver.observe(blocklyDiv.current);
+        } else {
+            window.addEventListener('resize', resizeWorkspace);
+        }
+
         // 监听工作区变化
         workspace.addChangeListener((event: Blockly.Events.Abstract) => {
             // 忽略 UI 事件，只响应积木变化
@@ -111,18 +168,22 @@ const BlocklyEditor = ({
 
         // 延迟调用 resize 确保工具箱正确显示
         const resizeTimer = setTimeout(() => {
-            Blockly.svgResize(workspace);
+            resizeWorkspace();
         }, 100);
 
         // 再次延迟 resize（确保弹窗动画完成后）
         const resizeTimer2 = setTimeout(() => {
-            Blockly.svgResize(workspace);
+            resizeWorkspace();
         }, 300);
 
         // 清理
         return () => {
             clearTimeout(resizeTimer);
             clearTimeout(resizeTimer2);
+            resizeObserver?.disconnect();
+            if (resizeObserver === null) {
+                window.removeEventListener('resize', resizeWorkspace);
+            }
             workspace.dispose();
             workspaceRef.current = null;
         };

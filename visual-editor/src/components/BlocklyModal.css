@@ -146,12 +146,42 @@
 /* 工具箱容器 */
 .blocklyToolboxDiv {
     background-color: #252526 !important;
-    min-width: 150px !important;
+    min-width: 180px !important;
+    width: 180px !important;
+    max-width: 220px !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    box-sizing: border-box !important;
+}
+
+.blocklyToolboxContents {
+    width: 100% !important;
+    min-width: 100% !important;
+    box-sizing: border-box !important;
 }
 
 /* 工具箱分类树 */
 .blocklyToolboxCategory {
     margin: 4px 0 !important;
+    height: auto !important;
+    min-height: 24px !important;
+}
+
+.blocklyToolboxCategoryLabel,
+.blocklyToolboxCategoryLabelText,
+.blocklyToolboxCategoryLabelTextCollapsed {
+    visibility: visible !important;
+    opacity: 1 !important;
+    height: auto !important;
+    width: auto !important;
+    display: inline-block !important;
+    color: #f4f6ff !important;
+    line-height: 22px !important;
+    font-size: 14px !important;
+    font-weight: 700 !important;
+    letter-spacing: 0.6px !important;
+    text-shadow: 0 1px 6px rgba(0, 0, 0, 0.45) !important;
+    pointer-events: auto !important;
 }
 
 .blocklyTreeRow {
@@ -159,6 +189,70 @@
     margin: 2px 8px !important;
     border-radius: 4px !important;
     min-width: 120px !important;
+    width: calc(100% - 16px) !important;
+    box-sizing: border-box !important;
+    position: relative !important;
+    overflow: hidden !important;
+    background: linear-gradient(90deg, var(--toolbox-accent-strong, rgba(255, 255, 255, 0.25)), var(--toolbox-accent-soft, rgba(255, 255, 255, 0.08))) !important;
+    border: 1px solid rgba(255, 255, 255, 0.2) !important;
+    border-left: 6px solid var(--toolbox-accent, rgba(255, 255, 255, 0.4)) !important;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18) !important;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease !important;
+    animation: toolboxFadeIn 0.35s ease-out both, toolboxPulse 3.2s ease-in-out infinite !important;
+}
+
+.blocklyToolboxCategory[aria-label="DAQ 专用"] .blocklyTreeRow,
+.blocklyToolboxCategory[aria-label="DAQ专用"] .blocklyTreeRow {
+    background: linear-gradient(90deg, rgba(166, 92, 92, 0.95), rgba(166, 92, 92, 0.45)) !important;
+    border-left-color: #a65c5c !important;
+    box-shadow: 0 8px 20px rgba(166, 92, 92, 0.35) !important;
+}
+
+.blocklyToolboxCategory[aria-label="逻辑"] .blocklyTreeRow {
+    background: linear-gradient(90deg, rgba(92, 129, 166, 0.95), rgba(92, 129, 166, 0.45)) !important;
+    border-left-color: #5c81a6 !important;
+    box-shadow: 0 8px 20px rgba(92, 129, 166, 0.35) !important;
+}
+
+.blocklyToolboxCategory[aria-label="数学"] .blocklyTreeRow {
+    background: linear-gradient(90deg, rgba(92, 166, 92, 0.95), rgba(92, 166, 92, 0.45)) !important;
+    border-left-color: #5ca65c !important;
+    box-shadow: 0 8px 20px rgba(92, 166, 92, 0.35) !important;
+}
+
+.blocklyTreeRow::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, rgba(255, 255, 255, 0.12), transparent 60%);
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.blocklyTreeRow:hover {
+    transform: translateX(4px);
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.28);
+    filter: brightness(1.08);
+}
+
+.blocklyTreeRow:hover::after {
+    opacity: 1;
+}
+
+.blocklyTreeSelected .blocklyTreeRow {
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.2), 0 12px 28px rgba(0, 0, 0, 0.35) !important;
+    filter: brightness(1.12);
+}
+
+@keyframes toolboxFadeIn {
+    from {
+        opacity: 0;
+        transform: translateX(-6px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
 }
 
 .blocklyTreeRowContentContainer {
@@ -167,8 +261,11 @@
 }
 
 .blocklyTreeLabel {
-    color: #fff !important;
-    font-size: 14px !important;
+    color: #f9fbff !important;
+    font-size: 15px !important;
+    font-weight: 700 !important;
+    letter-spacing: 0.6px !important;
+    text-shadow: 0 1px 8px rgba(0, 0, 0, 0.5) !important;
     white-space: nowrap !important;
 }
 
