@@ -25,6 +25,7 @@ NODE_TYPE_MAPPING = {
     "daq:math": "MathOperation",
     "daq:compare": "Compare",
     "daq:scale": "MathOperation",  # scale 操作使用 MathOperation
+    "daq:custom_script": "CustomScript",  # 用户自定义脚本 (Blockly)
 
     # 存储组件
     "daq:csv_write": "CSVStorage",
@@ -304,6 +305,12 @@ class CodeGenerator:
         elif node.type == "daq:csv_write" or node.type == "daq:csv_storage":
             props.setdefault("file_path", "./data/output.csv")
             props.setdefault("include_timestamp", True)
+
+        elif node.type == "daq:custom_script":
+            # CustomScript 节点需要保留 generatedCode 属性
+            props.setdefault("generatedCode", "")
+            # blocklyXml 只用于前端，后端不需要
+            props.pop("blocklyXml", None)
 
         return props
 

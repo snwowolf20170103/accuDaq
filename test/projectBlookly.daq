@@ -1,0 +1,87 @@
+{
+  "meta": {
+    "name": "New Project",
+    "version": "1.0.0",
+    "schemaVersion": "0.1.0"
+  },
+  "devices": [],
+  "logic": {
+    "nodes": [
+      {
+        "id": "9ff31924-58ea-4634-b48d-f25e92174ed3",
+        "type": "daq:custom_script",
+        "label": "Custom Script",
+        "position": {
+          "x": 100,
+          "y": 40
+        },
+        "properties": {
+          "blocklyXml": "<xml xmlns=\"https://developers.google.com/blockly/xml\"><block type=\"controls_if\" id=\"5LG#*q[O3#$[y:@y%yBY\" x=\"610\" y=\"290\"><value name=\"IF0\"><block type=\"logic_compare\" id=\"ou+b#^gi=9t0%Pc===!x\"><field name=\"OP\">LT</field><value name=\"A\"><block type=\"daq_read_input\" id=\"/mG]i,`]k/3}e3Qf=w$D\"><field name=\"PORT_NAME\">input1</field></block></value><value name=\"B\"><block type=\"math_number\" id=\"q$6[~:p3S9`4xCV@_bo.\"><field name=\"NUM\">100</field></block></value></block></value><statement name=\"DO0\"><block type=\"daq_set_output\" id=\"nVPIvK1`WE;Yv:MG^?eQ\"><field name=\"PORT_NAME\">output1</field><value name=\"VALUE\"><block type=\"math_number\" id=\"RMu)N*)X6uRg)_U$n`rI\"><field name=\"NUM\">8888</field></block></value></block></statement></block></xml>",
+          "generatedCode": "if get_input(\"input1\") < 100:\n  set_output(\"output1\", 8888)\n"
+        }
+      },
+      {
+        "id": "860c93ff-0626-49b8-826a-886f49b37f17",
+        "type": "daq:mock_device",
+        "label": "Mock Device",
+        "position": {
+          "x": -160,
+          "y": 0
+        },
+        "properties": {
+          "wave_type": "sine",
+          "amplitude": 10,
+          "offset": 25,
+          "frequency": 0.1,
+          "interval_ms": 1000,
+          "device_name": "Sensor01",
+          "broker_host": "localhost",
+          "broker_port": 1883,
+          "topic": "accudaq/demo/sensor"
+        }
+      },
+      {
+        "id": "02ab5da6-a7e1-4df7-8899-8d4486226587",
+        "type": "daq:csv_storage",
+        "label": "CSV Storage",
+        "position": {
+          "x": 540,
+          "y": -100
+        },
+        "properties": {
+          "file_path": "./test/output.csv",
+          "append_mode": false,
+          "include_timestamp": true,
+          "flush_interval": 10
+        }
+      }
+    ],
+    "wires": [
+      {
+        "id": "xy-edge__860c93ff-0626-49b8-826a-886f49b37f17value-9ff31924-58ea-4634-b48d-f25e92174ed3input1",
+        "source": {
+          "nodeId": "860c93ff-0626-49b8-826a-886f49b37f17",
+          "portId": "value"
+        },
+        "target": {
+          "nodeId": "9ff31924-58ea-4634-b48d-f25e92174ed3",
+          "portId": "input1"
+        }
+      },
+      {
+        "id": "xy-edge__9ff31924-58ea-4634-b48d-f25e92174ed3output1-02ab5da6-a7e1-4df7-8899-8d4486226587value",
+        "source": {
+          "nodeId": "9ff31924-58ea-4634-b48d-f25e92174ed3",
+          "portId": "output1"
+        },
+        "target": {
+          "nodeId": "02ab5da6-a7e1-4df7-8899-8d4486226587",
+          "portId": "value"
+        }
+      }
+    ]
+  },
+  "ui": {
+    "widgets": []
+  }
+}

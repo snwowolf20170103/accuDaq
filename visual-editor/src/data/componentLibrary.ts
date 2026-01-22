@@ -157,6 +157,28 @@ export const componentLibrary: ComponentDefinition[] = [
             { key: 'tolerance', label: 'Tolerance', type: 'number' },
         ]
     },
+    {
+        type: 'custom_script',
+        name: 'Custom Script',
+        category: 'logic',
+        icon: '🧩',
+        description: 'User-defined logic with Blockly',
+        inputs: [
+            { id: 'input1', name: 'Input 1', type: 'number' },
+            { id: 'input2', name: 'Input 2', type: 'number' },
+        ],
+        outputs: [
+            { id: 'output1', name: 'Output 1', type: 'number' },
+        ],
+        defaultProperties: {
+            blocklyXml: '',
+            generatedCode: '',
+        },
+        propertySchema: [
+            { key: 'blocklyXml', label: 'Blockly XML', type: 'hidden' },
+            { key: 'generatedCode', label: 'Generated Code', type: 'code', readonly: true },
+        ]
+    },
 
     // Storage Components
     {

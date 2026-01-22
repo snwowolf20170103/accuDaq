@@ -19,9 +19,10 @@ export interface ComponentDefinition {
 export interface PropertySchema {
     key: string
     label: string
-    type: 'string' | 'number' | 'boolean' | 'select'
+    type: 'string' | 'number' | 'boolean' | 'select' | 'hidden' | 'code'
     options?: { value: string; label: string }[]
     default?: any
+    readonly?: boolean
 }
 
 export interface DAQNodeData {

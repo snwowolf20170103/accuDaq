@@ -1,6 +1,8 @@
+import { useState } from 'react'
 import { Node } from '@xyflow/react'
 import { DAQNodeData } from '../types'
 import componentLibrary from '../data/componentLibrary'
+import BlocklyModal from './BlocklyModal'
 
 interface PropertyPanelProps {
     node: Node | undefined
@@ -8,6 +10,8 @@ interface PropertyPanelProps {
 }
 
 const PropertyPanel = ({ node, onPropertyChange }: PropertyPanelProps) => {
+    const [isBlocklyModalOpen, setIsBlocklyModalOpen] = useState(false)
+
     if (!node) {
         return (
             <div className="property-panel">
@@ -27,6 +31,7 @@ const PropertyPanel = ({ node, onPropertyChange }: PropertyPanelProps) => {
     const nodeData = node.data as DAQNodeData
     const componentDef = componentLibrary.find(c => c.type === nodeData.componentType)
     const propertySchema = componentDef?.propertySchema || []
+    const isCustomScript = nodeData.componentType === 'custom_script'
 
     const handleChange = (key: string, value: any, type: string) => {
         let parsedValue = value
@@ -36,6 +41,11 @@ const PropertyPanel = ({ node, onPropertyChange }: PropertyPanelProps) => {
             parsedValue = value === 'true' || value === true
         }
         onPropertyChange(node.id, key, parsedValue)
+    }
+
+    const handleBlocklySave = (code: string, xml: string) => {
+        onPropertyChange(node.id, 'generatedCode', code)
+        onPropertyChange(node.id, 'blocklyXml', xml)
     }
 
     return (
@@ -69,9 +79,58 @@ const PropertyPanel = ({ node, onPropertyChange }: PropertyPanelProps) => {
                     </div>
                 </div>
 
+                {/* Custom Script 专用：编辑逻辑按钮 */}
+                {isCustomScript && (
+                    <div className="property-group">
+                        <div className="property-group-title">Script Editor</div>
+                        <div className="property-row">
+                            <button
+                                className="blockly-edit-btn"
+                                onClick={() => setIsBlocklyModalOpen(true)}
+                                style={{
+                                    width: '100%',
+                                    padding: '10px 16px',
+                                    background: '#0e639c',
+                                    color: '#fff',
+                                    border: 'none',
+                                    borderRadius: '4px',
+                                    cursor: 'pointer',
+                                    fontSize: '14px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    gap: '8px',
+                                }}
+                            >
+                                🧩 编辑逻辑
+                            </button>
+                        </div>
+                        {nodeData.properties.generatedCode && (
+                            <div className="property-row" style={{ marginTop: '8px' }}>
+                                <pre style={{
+                                    width: '100%',
+                                    padding: '8px',
+                                    background: '#1e1e1e',
+                                    borderRadius: '4px',
+                                    fontSize: '11px',
+                                    color: '#9cdcfe',
+                                    margin: 0,
+                                    whiteSpace: 'pre-wrap',
+                                    maxHeight: '120px',
+                                    overflow: 'auto',
+                                }}>
+                                    {nodeData.properties.generatedCode}
+                                </pre>
+                            </div>
+                        )}
+                    </div>
+                )}
+
                 <div className="property-group">
                     <div className="property-group-title">Configuration</div>
-                    {propertySchema.map(prop => (
+                    {propertySchema
+                        .filter(prop => prop.type !== 'hidden' && prop.type !== 'code')
+                        .map(prop => (
                         <div key={prop.key} className="property-row">
                             <div className="property-label">{prop.label}</div>
                             {prop.type === 'select' ? (
@@ -127,6 +186,15 @@ const PropertyPanel = ({ node, onPropertyChange }: PropertyPanelProps) => {
                     </div>
                 </div>
             </div>
+
+            {/* Blockly 弹窗编辑器 */}
+            <BlocklyModal
+                isOpen={isBlocklyModalOpen}
+                onClose={() => setIsBlocklyModalOpen(false)}
+                onSave={handleBlocklySave}
+                initialXml={nodeData.properties.blocklyXml || ''}
+                nodeName={nodeData.label}
+            />
         </div>
     )
 }

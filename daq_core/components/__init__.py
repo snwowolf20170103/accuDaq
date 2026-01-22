@@ -8,6 +8,7 @@ from .mqtt_publisher import MQTTPublisherComponent
 from .mock_device import MockDeviceComponent
 from .math_ops import MathOperationComponent, CompareComponent
 from .csv_storage import CSVStorageComponent
+from .custom_script import CustomScriptComponent
 
 __all__ = [
     "ComponentBase",
@@ -18,5 +19,6 @@ __all__ = [
     "MathOperationComponent",
     "CompareComponent",
     "CSVStorageComponent",
+    "CustomScriptComponent",
 ]
 

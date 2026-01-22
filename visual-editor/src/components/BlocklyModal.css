@@ -1,0 +1,202 @@
+/**
+ * Blockly 弹窗样式
+ */
+
+.blockly-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.blockly-modal-content {
+    width: 85%;
+    height: 85%;
+    background: #1e1e1e;
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+    overflow: hidden;
+}
+
+.blockly-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 20px;
+    background: #2d2d2d;
+    border-bottom: 1px solid #404040;
+}
+
+.blockly-modal-header h2 {
+    margin: 0;
+    font-size: 18px;
+    color: #fff;
+    font-weight: 500;
+}
+
+.blockly-modal-close {
+    background: none;
+    border: none;
+    color: #888;
+    font-size: 28px;
+    cursor: pointer;
+    padding: 0;
+    line-height: 1;
+    transition: color 0.2s;
+}
+
+.blockly-modal-close:hover {
+    color: #fff;
+}
+
+.blockly-modal-body {
+    flex: 1;
+    display: flex;
+    overflow: hidden;
+}
+
+.blockly-editor-container {
+    flex: 1;
+    min-width: 0;
+    height: 100%;
+    position: relative;
+    overflow: hidden;
+}
+
+.blockly-code-preview {
+    width: 300px;
+    background: #252526;
+    border-left: 1px solid #404040;
+    padding: 16px;
+    overflow: auto;
+    display: flex;
+    flex-direction: column;
+}
+
+.blockly-code-preview h3 {
+    margin: 0 0 12px 0;
+    font-size: 14px;
+    color: #888;
+    font-weight: 500;
+}
+
+.blockly-code-preview pre {
+    flex: 1;
+    margin: 0;
+    padding: 12px;
+    background: #1e1e1e;
+    border-radius: 4px;
+    font-family: 'Consolas', 'Monaco', monospace;
+    font-size: 13px;
+    color: #9cdcfe;
+    white-space: pre-wrap;
+    word-break: break-word;
+    overflow: auto;
+}
+
+.blockly-modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    padding: 12px 20px;
+    background: #2d2d2d;
+    border-top: 1px solid #404040;
+}
+
+.blockly-btn {
+    padding: 8px 24px;
+    border: none;
+    border-radius: 4px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.blockly-btn-cancel {
+    background: #404040;
+    color: #ccc;
+}
+
+.blockly-btn-cancel:hover {
+    background: #505050;
+}
+
+.blockly-btn-save {
+    background: #0e639c;
+    color: #fff;
+}
+
+.blockly-btn-save:hover {
+    background: #1177bb;
+}
+
+/* Blockly 工作区样式覆盖 */
+.blocklySvg {
+    background-color: #1e1e1e !important;
+}
+
+/* 工具箱容器 */
+.blocklyToolboxDiv {
+    background-color: #252526 !important;
+    min-width: 150px !important;
+}
+
+/* 工具箱分类树 */
+.blocklyToolboxCategory {
+    margin: 4px 0 !important;
+}
+
+.blocklyTreeRow {
+    padding: 8px 12px !important;
+    margin: 2px 8px !important;
+    border-radius: 4px !important;
+    min-width: 120px !important;
+}
+
+.blocklyTreeRowContentContainer {
+    display: flex !important;
+    align-items: center !important;
+}
+
+.blocklyTreeLabel {
+    color: #fff !important;
+    font-size: 14px !important;
+    white-space: nowrap !important;
+}
+
+.blocklyTreeIcon {
+    margin-right: 8px !important;
+}
+
+/* Flyout 背景 */
+.blocklyFlyoutBackground {
+    fill: #2d2d2d !important;
+}
+
+/* 滚动条 */
+.blocklyScrollbarVertical,
+.blocklyScrollbarHorizontal {
+    background-color: #333 !important;
+}
+
+.blocklyScrollbarHandle {
+    fill: #555 !important;
+}
+
+/* 积木块文字 */
+.blocklyText {
+    fill: #fff !important;
+}
+
+/* 确保工具箱有足够宽度 */
+.injectionDiv {
+    overflow: visible !important;
+}

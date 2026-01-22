@@ -154,7 +154,7 @@ class DAQEngine:
                     if component._is_running:
                         # 只对需要主动触发的组件调用 process
                         # MQTT/MockDevice 有自己的线程，不需要在这里处理
-                        if component.component_name in ["MathOperation", "Compare", "CSVStorage"]:
+                        if component.component_name in ["MathOperation", "Compare", "CSVStorage", "CustomScript"]:
                             component.process()
 
             except Exception as e:

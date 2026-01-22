@@ -40,6 +40,7 @@ htmlcov/
 
 # Project specific data
 data/*.csv
+test/*.csv
 mqtt_realtime_output.csv
 run_realtime_app.py
 test_realtime.daq
