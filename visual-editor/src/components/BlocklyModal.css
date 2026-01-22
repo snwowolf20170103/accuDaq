@@ -181,7 +181,7 @@
     font-weight: 700 !important;
     letter-spacing: 0.6px !important;
     text-shadow: 0 1px 6px rgba(0, 0, 0, 0.45) !important;
-    pointer-events: auto !important;
+    /* 不要设置 pointer-events，让 Blockly 自己处理 */
 }
 
 .blocklyTreeRow {
@@ -197,8 +197,8 @@
     border: 1px solid rgba(255, 255, 255, 0.2) !important;
     border-left: 6px solid var(--toolbox-accent, rgba(255, 255, 255, 0.4)) !important;
     box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18) !important;
-    transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease !important;
-    animation: toolboxFadeIn 0.35s ease-out both, toolboxPulse 3.2s ease-in-out infinite !important;
+    transition: box-shadow 0.2s ease, filter 0.2s ease !important;
+    /* 注意: 移除了 transform 过渡和动画，因为它们会干扰 Blockly 的点击事件处理 */
 }
 
 .blocklyToolboxCategory[aria-label="DAQ 专用"] .blocklyTreeRow,
@@ -220,23 +220,9 @@
     box-shadow: 0 8px 20px rgba(92, 166, 92, 0.35) !important;
 }
 
-.blocklyTreeRow::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(90deg, rgba(255, 255, 255, 0.12), transparent 60%);
-    opacity: 0;
-    transition: opacity 0.2s ease;
-}
-
 .blocklyTreeRow:hover {
-    transform: translateX(4px);
     box-shadow: 0 10px 24px rgba(0, 0, 0, 0.28);
-    filter: brightness(1.08);
-}
-
-.blocklyTreeRow:hover::after {
-    opacity: 1;
+    filter: brightness(1.15);
 }
 
 .blocklyTreeSelected .blocklyTreeRow {
@@ -244,16 +230,7 @@
     filter: brightness(1.12);
 }
 
-@keyframes toolboxFadeIn {
-    from {
-        opacity: 0;
-        transform: translateX(-6px);
-    }
-    to {
-        opacity: 1;
-        transform: translateX(0);
-    }
-}
+/* 移除 toolboxFadeIn 动画以避免干扰 Blockly 事件处理 */
 
 .blocklyTreeRowContentContainer {
     display: flex !important;
@@ -296,4 +273,18 @@
 /* 确保工具箱有足够宽度 */
 .injectionDiv {
     overflow: visible !important;
+}
+
+/* Block Factory 按钮 */
+.blockly-btn-factory {
+    background: #9B59B6 !important;
+    margin-right: auto;
+}
+
+.blockly-btn-factory:hover {
+    background: #8E44AD !important;
+}
+
+.blockly-footer-spacer {
+    flex: 1;
 }

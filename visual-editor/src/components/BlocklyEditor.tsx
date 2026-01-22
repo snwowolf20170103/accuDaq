@@ -83,6 +83,11 @@ const BlocklyEditor = ({
 
         workspaceRef.current = workspace;
 
+        // NOTE: 在 Blockly v12+ 中，VARIABLE 和 PROCEDURE 类别由 Blockly 内部自动注册
+        // 不需要手动调用 registerToolboxCategoryCallback
+        // 手动注册会导致冲突，破坏类别切换功能
+
+
         // 恢复之前的积木状态
         if (initialXml) {
             try {
@@ -93,48 +98,15 @@ const BlocklyEditor = ({
             }
         }
 
-        const categoryColors = new Map<string, string>();
-        (daqToolboxConfig.contents as Array<{ kind: string; name?: string; colour?: string }>).forEach(
-            (item) => {
-                if (item.kind === 'category' && item.name && item.colour) {
-                    categoryColors.set(item.name, item.colour);
-                }
-            }
-        );
 
-        const applyToolboxCategoryColors = () => {
-            if (!blocklyDiv.current) return;
-            const categories = blocklyDiv.current.querySelectorAll<HTMLElement>('.blocklyToolboxCategory');
-            categories.forEach((category) => {
-                const label = category.getAttribute('aria-label')?.trim()
-                    || category.querySelector('.blocklyToolboxCategoryLabel')?.textContent?.trim()
-                    || '';
-                if (!label) return;
-                const color = categoryColors.get(label);
-                if (!color) return;
-                const row = category.querySelector<HTMLElement>('.blocklyTreeRow') || category;
-                const isHex = color.startsWith('#') && color.length === 7;
-                const accentStrong = isHex ? `${color}cc` : color;
-                const accentSoft = isHex ? `${color}55` : color;
-                row.style.setProperty('--toolbox-accent', color);
-                row.style.setProperty('--toolbox-accent-strong', accentStrong);
-                row.style.setProperty('--toolbox-accent-soft', accentSoft);
-                row.style.background = `linear-gradient(90deg, ${accentStrong}, ${accentSoft})`;
-                row.style.borderLeft = `6px solid ${color}`;
-            });
-        };
+        // 自定义工具箱颜色样式 - 使用 CSS 变量而非直接修改 DOM
+        // 注意：直接修改 DOM 会干扰 Blockly 的点击事件处理
+        // 导致 "Cannot read properties of null (reading 'isSelectable')" 错误
+        // 工具箱颜色由 daqToolboxConfig 中的 colour 属性控制
 
         const resizeWorkspace = () => {
             if (workspaceRef.current) {
                 Blockly.svgResize(workspaceRef.current);
-                const toolbox = workspaceRef.current.getToolbox?.();
-                if (toolbox && typeof (toolbox as any).refreshSelection === 'function') {
-                    (toolbox as any).refreshSelection();
-                }
-                if (toolbox && typeof (toolbox as any).setVisible === 'function') {
-                    (toolbox as any).setVisible(true);
-                }
-                applyToolboxCategoryColors();
             }
         };
 

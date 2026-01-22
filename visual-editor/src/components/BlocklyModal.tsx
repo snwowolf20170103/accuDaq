@@ -5,6 +5,7 @@
 
 import { useState, useCallback } from 'react';
 import BlocklyEditor from './BlocklyEditor';
+import BlockFactory from './BlockFactory';
 import './BlocklyModal.css';
 
 interface BlocklyModalProps {
@@ -29,11 +30,21 @@ const BlocklyModal = ({
 }: BlocklyModalProps) => {
     const [currentCode, setCurrentCode] = useState('');
     const [currentXml, setCurrentXml] = useState(initialXml);
+    const [isFactoryOpen, setIsFactoryOpen] = useState(false);
 
     // 处理代码变更
     const handleCodeChange = useCallback((code: string, xml: string) => {
         setCurrentCode(code);
         setCurrentXml(xml);
+    }, []);
+
+    // 处理 Block Factory 保存
+    const handleFactorySave = useCallback((blockDef: string, generatorCode: string, blockName: string) => {
+        console.log('New custom block created:', blockName);
+        console.log('Block Definition:', blockDef);
+        console.log('Generator Code:', generatorCode);
+        // TODO: 动态注册新积木到工作区
+        alert(`积木 "${blockName}" 已创建！\n\n代码已输出到控制台，请将其添加到 daqBlocks.ts 中。`);
     }, []);
 
     // 处理保存
@@ -85,6 +96,13 @@ const BlocklyModal = ({
 
                 {/* 底部按钮 */}
                 <div className="blockly-modal-footer">
+                    <button 
+                        className="blockly-btn blockly-btn-factory" 
+                        onClick={() => setIsFactoryOpen(true)}
+                    >
+                        🏭 Block Factory
+                    </button>
+                    <div className="blockly-footer-spacer" />
                     <button className="blockly-btn blockly-btn-cancel" onClick={handleCancel}>
                         取消
                     </button>
@@ -93,6 +111,13 @@ const BlocklyModal = ({
                     </button>
                 </div>
             </div>
+
+            {/* Block Factory 弹窗 */}
+            <BlockFactory
+                isOpen={isFactoryOpen}
+                onClose={() => setIsFactoryOpen(false)}
+                onSaveBlock={handleFactorySave}
+            />
         </div>
     );
 };

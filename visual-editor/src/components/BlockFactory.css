@@ -1,0 +1,248 @@
+/**
+ * Block Factory 样式
+ */
+
+.block-factory-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+}
+
+.block-factory-content {
+    background: #1e1e1e;
+    border-radius: 8px;
+    width: 95vw;
+    height: 90vh;
+    max-width: 1600px;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+    border: 1px solid #3c3c3c;
+}
+
+.block-factory-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 20px;
+    background: #2d2d2d;
+    border-bottom: 1px solid #3c3c3c;
+    border-radius: 8px 8px 0 0;
+}
+
+.block-factory-header h2 {
+    margin: 0;
+    font-size: 18px;
+    color: #fff;
+    font-weight: 500;
+}
+
+.block-factory-close {
+    background: none;
+    border: none;
+    color: #888;
+    font-size: 24px;
+    cursor: pointer;
+    padding: 0 8px;
+    line-height: 1;
+}
+
+.block-factory-close:hover {
+    color: #fff;
+}
+
+.block-factory-body {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+}
+
+/* 左侧设计区 */
+.block-factory-design {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    border-right: 1px solid #3c3c3c;
+}
+
+.block-factory-design h3 {
+    margin: 0;
+    padding: 10px 16px;
+    font-size: 14px;
+    color: #aaa;
+    background: #252525;
+    border-bottom: 1px solid #3c3c3c;
+}
+
+.block-factory-workspace {
+    flex: 1;
+    background: #252526;
+}
+
+/* 右侧输出区 */
+.block-factory-output {
+    width: 450px;
+    display: flex;
+    flex-direction: column;
+    background: #1e1e1e;
+}
+
+/* 预览区 */
+.block-factory-preview-section {
+    height: 200px;
+    border-bottom: 1px solid #3c3c3c;
+    display: flex;
+    flex-direction: column;
+}
+
+.block-factory-preview-section h3 {
+    margin: 0;
+    padding: 10px 16px;
+    font-size: 14px;
+    color: #aaa;
+    background: #252525;
+    border-bottom: 1px solid #3c3c3c;
+}
+
+.block-factory-preview {
+    flex: 1;
+    background: #252526;
+    overflow: hidden;
+}
+
+/* 代码输出区 */
+.block-factory-code-section {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.block-factory-tabs {
+    display: flex;
+    background: #252525;
+    border-bottom: 1px solid #3c3c3c;
+}
+
+.tab-btn {
+    flex: 1;
+    padding: 10px 16px;
+    background: transparent;
+    border: none;
+    color: #888;
+    cursor: pointer;
+    font-size: 13px;
+    transition: all 0.2s;
+}
+
+.tab-btn:hover {
+    background: #2d2d2d;
+    color: #fff;
+}
+
+.tab-btn.active {
+    background: #1e1e1e;
+    color: #4fc3f7;
+    border-bottom: 2px solid #4fc3f7;
+}
+
+.block-factory-code {
+    flex: 1;
+    position: relative;
+    overflow: auto;
+    background: #1a1a1a;
+}
+
+.block-factory-code pre {
+    margin: 0;
+    padding: 16px;
+    font-family: 'Consolas', 'Monaco', monospace;
+    font-size: 12px;
+    color: #d4d4d4;
+    white-space: pre-wrap;
+    word-break: break-all;
+    line-height: 1.5;
+}
+
+.copy-btn {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    padding: 6px 12px;
+    background: #3c3c3c;
+    border: none;
+    border-radius: 4px;
+    color: #fff;
+    font-size: 12px;
+    cursor: pointer;
+    opacity: 0.8;
+    transition: all 0.2s;
+}
+
+.copy-btn:hover {
+    background: #4fc3f7;
+    opacity: 1;
+}
+
+/* 底部按钮 */
+.block-factory-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    padding: 12px 20px;
+    background: #2d2d2d;
+    border-top: 1px solid #3c3c3c;
+    border-radius: 0 0 8px 8px;
+}
+
+.factory-btn {
+    padding: 8px 24px;
+    border: none;
+    border-radius: 4px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.factory-btn-cancel {
+    background: #3c3c3c;
+    color: #fff;
+}
+
+.factory-btn-cancel:hover {
+    background: #4a4a4a;
+}
+
+.factory-btn-save {
+    background: #0e639c;
+    color: #fff;
+}
+
+.factory-btn-save:hover {
+    background: #1177bb;
+}
+
+/* Blockly 工具箱样式覆盖 */
+.block-factory-workspace .blocklyToolboxDiv {
+    background: #252525 !important;
+}
+
+.block-factory-workspace .blocklyTreeRow {
+    padding: 6px 12px !important;
+}
+
+.block-factory-workspace .blocklyTreeLabel {
+    color: #ccc !important;
+}
+
+/* 预览区 Blockly 样式 */
+.block-factory-preview .blocklyMainBackground {
+    fill: #252526 !important;
+}
