@@ -207,6 +207,133 @@ export const componentLibrary: ComponentDefinition[] = [
             { key: 'flush_interval', label: 'Flush Interval', type: 'number' },
         ]
     },
+
+    // 新增组件 - Modbus TCP
+    {
+        type: 'modbus_tcp',
+        name: 'Modbus TCP',
+        category: 'device',
+        icon: '🏭',
+        description: 'Read from Modbus TCP device',
+        inputs: [],
+        outputs: [
+            { id: 'value', name: 'Value', type: 'number' },
+            { id: 'connected', name: 'Connected', type: 'boolean' },
+        ],
+        defaultProperties: {
+            host: '127.0.0.1',
+            port: 502,
+            register: 0,
+            count: 1,
+            slave_id: 1,
+            data_type: 'uint16',
+        },
+        propertySchema: [
+            { key: 'host', label: 'Host', type: 'string' },
+            { key: 'port', label: 'Port', type: 'number' },
+            { key: 'register', label: 'Register Address', type: 'number' },
+            { key: 'count', label: 'Register Count', type: 'number' },
+            { key: 'slave_id', label: 'Slave ID', type: 'number' },
+            {
+                key: 'data_type', label: 'Data Type', type: 'select', options: [
+                    { value: 'uint16', label: 'Unsigned Int 16' },
+                    { value: 'int16', label: 'Signed Int 16' },
+                    { value: 'float32', label: 'Float 32' },
+                ]
+            },
+        ]
+    },
+
+    // 新增组件 - Threshold Alarm
+    {
+        type: 'threshold_alarm',
+        name: 'Threshold Alarm',
+        category: 'logic',
+        icon: '🚨',
+        description: 'Trigger alarm when value exceeds threshold',
+        inputs: [
+            { id: 'value', name: 'Value', type: 'number' },
+        ],
+        outputs: [
+            { id: 'alarm', name: 'Alarm', type: 'boolean' },
+            { id: 'value_out', name: 'Value Out', type: 'number' },
+        ],
+        defaultProperties: {
+            threshold: 30.0,
+            compare_type: 'greater',
+        },
+        propertySchema: [
+            { key: 'threshold', label: 'Threshold', type: 'number' },
+            {
+                key: 'compare_type', label: 'Compare Type', type: 'select', options: [
+                    { value: 'greater', label: 'Greater Than' },
+                    { value: 'less', label: 'Less Than' },
+                    { value: 'equal', label: 'Equal' },
+                    { value: 'greater_equal', label: 'Greater or Equal' },
+                    { value: 'less_equal', label: 'Less or Equal' },
+                ]
+            },
+        ]
+    },
+
+    // 新增组件 - Debug Print
+    {
+        type: 'debug_print',
+        name: 'Debug Print',
+        category: 'logic',
+        icon: '🐛',
+        description: 'Print values to console for debugging',
+        inputs: [
+            { id: 'value', name: 'Value', type: 'any' },
+        ],
+        outputs: [
+            { id: 'value_out', name: 'Value Out', type: 'any' },
+        ],
+        defaultProperties: {
+            prefix: 'DEBUG',
+            format: 'simple',
+        },
+        propertySchema: [
+            { key: 'prefix', label: 'Prefix', type: 'string' },
+            {
+                key: 'format', label: 'Format', type: 'select', options: [
+                    { value: 'simple', label: 'Simple' },
+                    { value: 'json', label: 'JSON' },
+                ]
+            },
+        ]
+    },
+
+    // 新增组件 - Global Variable
+    {
+        type: 'global_variable',
+        name: 'Global Variable',
+        category: 'logic',
+        icon: '📦',
+        description: 'Read/Write global variables',
+        inputs: [
+            { id: 'value_in', name: 'Value In', type: 'any' },
+        ],
+        outputs: [
+            { id: 'value_out', name: 'Value Out', type: 'any' },
+        ],
+        defaultProperties: {
+            variable_name: 'global_var',
+            mode: 'read_write',
+            initial_value: 0,
+        },
+        propertySchema: [
+            { key: 'variable_name', label: 'Variable Name', type: 'string' },
+            {
+                key: 'mode', label: 'Mode', type: 'select', options: [
+                    { value: 'read', label: 'Read Only' },
+                    { value: 'write', label: 'Write Only' },
+                    { value: 'read_write', label: 'Read & Write' },
+                ]
+            },
+            { key: 'initial_value', label: 'Initial Value', type: 'number' },
+        ]
+    },
 ]
 
 export default componentLibrary

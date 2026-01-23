@@ -1,0 +1,481 @@
+/**
+ * DevicePanel 样式
+ */
+
+.device-panel {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    background: #1e1e1e;
+    color: #ccc;
+    overflow: hidden;
+}
+
+/* 头部 */
+.device-panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px;
+    background: #2d2d2d;
+    border-bottom: 1px solid #3c3c3c;
+}
+
+.device-panel-header h3 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: #fff;
+}
+
+.device-panel-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.btn-add-device,
+.btn-toggle-raw {
+    padding: 6px 12px;
+    border: none;
+    border-radius: 4px;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-add-device {
+    background: #27ae60;
+    color: #fff;
+    font-weight: 500;
+}
+
+.btn-add-device:hover {
+    background: #2ecc71;
+}
+
+.btn-toggle-raw {
+    background: #3c3c3c;
+    color: #ccc;
+}
+
+.btn-toggle-raw:hover {
+    background: #4a4a4a;
+}
+
+/* 设备列表 */
+.device-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.device-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: #666;
+}
+
+.device-empty-icon {
+    font-size: 48px;
+    margin-bottom: 16px;
+}
+
+.device-empty-text {
+    font-size: 16px;
+    font-weight: 500;
+    margin-bottom: 8px;
+}
+
+.device-empty-hint {
+    font-size: 13px;
+    color: #555;
+}
+
+/* 设备卡片 */
+.device-card {
+    background: #252525;
+    border: 1px solid #3c3c3c;
+    border-radius: 8px;
+    padding: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.device-card:hover {
+    border-color: #4fc3f7;
+    background: #2a2a2a;
+}
+
+.device-card.selected {
+    border-color: #4fc3f7;
+    background: #2a2a2a;
+    box-shadow: 0 0 0 1px #4fc3f7;
+}
+
+.device-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.device-card-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.device-icon {
+    font-size: 20px;
+}
+
+.device-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: #fff;
+}
+
+.device-card-actions {
+    display: flex;
+    gap: 4px;
+}
+
+.btn-icon {
+    background: none;
+    border: none;
+    font-size: 16px;
+    cursor: pointer;
+    padding: 4px;
+    opacity: 0.7;
+    transition: opacity 0.2s;
+}
+
+.btn-icon:hover {
+    opacity: 1;
+}
+
+.device-card-body {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.device-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.status-indicator {
+    font-size: 14px;
+}
+
+.status-text {
+    font-size: 13px;
+    font-weight: 500;
+}
+
+.device-type {
+    font-size: 12px;
+    color: #888;
+}
+
+.device-last-update {
+    font-size: 11px;
+    color: #666;
+}
+
+.device-card-footer {
+    display: flex;
+    gap: 8px;
+}
+
+.btn-connect,
+.btn-disconnect {
+    flex: 1;
+    padding: 8px 16px;
+    border: none;
+    border-radius: 4px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-connect {
+    background: #27ae60;
+    color: #fff;
+}
+
+.btn-connect:hover:not(:disabled) {
+    background: #2ecc71;
+}
+
+.btn-connect:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.btn-disconnect {
+    background: #e74c3c;
+    color: #fff;
+}
+
+.btn-disconnect:hover {
+    background: #c0392b;
+}
+
+/* 原始数据查看器 */
+.raw-data-viewer {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+}
+
+.raw-data-content {
+    background: #252525;
+    border: 1px solid #3c3c3c;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.raw-data-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    background: #2d2d2d;
+    border-bottom: 1px solid #3c3c3c;
+}
+
+.raw-data-header h4 {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 600;
+    color: #fff;
+}
+
+.raw-data-status {
+    font-size: 13px;
+    color: #ccc;
+}
+
+.raw-data-table {
+    overflow-x: auto;
+}
+
+.raw-data-table table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.raw-data-table th,
+.raw-data-table td {
+    padding: 10px 16px;
+    text-align: left;
+    font-size: 13px;
+    border-bottom: 1px solid #3c3c3c;
+}
+
+.raw-data-table th {
+    background: #2d2d2d;
+    color: #aaa;
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 11px;
+    letter-spacing: 0.5px;
+}
+
+.raw-data-table td {
+    color: #ccc;
+}
+
+.raw-data-table tr:last-child td {
+    border-bottom: none;
+}
+
+.raw-data-table tr.highlight {
+    background: #2a2a4a;
+}
+
+.raw-data-table tr.highlight td {
+    color: #4fc3f7;
+}
+
+.raw-data-empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 200px;
+    color: #666;
+    font-size: 14px;
+}
+
+/* 对话框 */
+.dialog-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+}
+
+.dialog-content {
+    background: #2d2d2d;
+    border-radius: 8px;
+    width: 90%;
+    max-width: 500px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+    border: 1px solid #3c3c3c;
+}
+
+.dialog-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 20px;
+    border-bottom: 1px solid #3c3c3c;
+}
+
+.dialog-header h3 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: #fff;
+}
+
+.dialog-close {
+    background: none;
+    border: none;
+    font-size: 24px;
+    color: #888;
+    cursor: pointer;
+    padding: 0;
+    width: 24px;
+    height: 24px;
+    line-height: 1;
+}
+
+.dialog-close:hover {
+    color: #fff;
+}
+
+.dialog-body {
+    padding: 20px;
+}
+
+.form-group {
+    margin-bottom: 16px;
+}
+
+.form-group label {
+    display: block;
+    font-size: 13px;
+    font-weight: 500;
+    color: #aaa;
+    margin-bottom: 8px;
+}
+
+.form-group input,
+.form-group select {
+    width: 100%;
+    padding: 10px 12px;
+    font-size: 14px;
+    border: 1px solid #3c3c3c;
+    border-radius: 4px;
+    background: #1e1e1e;
+    color: #ccc;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+.form-group input:focus,
+.form-group select:focus {
+    border-color: #4fc3f7;
+}
+
+.form-hint {
+    font-size: 12px;
+    color: #666;
+    padding: 12px;
+    background: #1e1e1e;
+    border-radius: 4px;
+    border-left: 3px solid #4fc3f7;
+}
+
+.dialog-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    padding: 16px 20px;
+    border-top: 1px solid #3c3c3c;
+}
+
+.btn-cancel,
+.btn-confirm {
+    padding: 8px 20px;
+    border: none;
+    border-radius: 4px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-cancel {
+    background: #3c3c3c;
+    color: #ccc;
+}
+
+.btn-cancel:hover {
+    background: #4a4a4a;
+}
+
+.btn-confirm {
+    background: #27ae60;
+    color: #fff;
+}
+
+.btn-confirm:hover {
+    background: #2ecc71;
+}
+
+/* 滚动条样式 */
+.device-list::-webkit-scrollbar,
+.raw-data-viewer::-webkit-scrollbar,
+.raw-data-table::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+.device-list::-webkit-scrollbar-track,
+.raw-data-viewer::-webkit-scrollbar-track,
+.raw-data-table::-webkit-scrollbar-track {
+    background: #1e1e1e;
+}
+
+.device-list::-webkit-scrollbar-thumb,
+.raw-data-viewer::-webkit-scrollbar-thumb,
+.raw-data-table::-webkit-scrollbar-thumb {
+    background: #3c3c3c;
+    border-radius: 4px;
+}
+
+.device-list::-webkit-scrollbar-thumb:hover,
+.raw-data-viewer::-webkit-scrollbar-thumb:hover,
+.raw-data-table::-webkit-scrollbar-thumb:hover {
+    background: #4a4a4a;
+}

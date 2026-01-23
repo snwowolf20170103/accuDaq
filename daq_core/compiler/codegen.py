@@ -14,18 +14,21 @@ logger = logging.getLogger(__name__)
 
 
 # 节点类型到组件名称的映射
-# 节点类型到组件名称的映射
 NODE_TYPE_MAPPING = {
     # 设备组件
     "daq:mock_device": "MockDevice",
     "daq:mqtt_subscribe": "MQTTSubscriber",
     "daq:mqtt_publish": "MQTTPublisher",
+    "daq:modbus_tcp": "ModbusClient",  # 新增 - Modbus TCP 客户端
 
     # 逻辑组件
     "daq:math": "MathOperation",
     "daq:compare": "Compare",
     "daq:scale": "MathOperation",  # scale 操作使用 MathOperation
     "daq:custom_script": "CustomScript",  # 用户自定义脚本 (Blockly)
+    "daq:threshold_alarm": "ThresholdAlarm",  # 新增 - 阈值报警
+    "daq:debug_print": "DebugPrint",  # 新增 - 调试打印
+    "daq:global_variable": "GlobalVariable",  # 新增 - 全局变量
 
     # 存储组件
     "daq:csv_write": "CSVStorage",
