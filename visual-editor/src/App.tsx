@@ -209,17 +209,39 @@ function App() {
     )
 
     const onNodeClick = useCallback((_: any, node: any) => {
+        // 点击节点时，取消其他所有节点的选择
+        setNodes((nds) => nds.map((n) => ({
+            ...n,
+            selected: n.id === node.id
+        })))
         setSelectedNode(node.id)
-    }, [])
+    }, [setNodes])
 
     const onNodeDragStart = useCallback((_: any, node: any) => {
-        // 拖拽开始时，确保只选中当前节点
+        // 拖拽开始时，确保只选中当前节点，取消其他节点选择
+        setNodes((nds) => nds.map((n) => ({
+            ...n,
+            selected: n.id === node.id
+        })))
         setSelectedNode(node.id)
-    }, [])
+    }, [setNodes])
+
+    const onNodeDrag = useCallback((_: any, node: any) => {
+        // 拖拽过程中，持续确保只有当前节点被选中
+        setNodes((nds) => nds.map((n) => ({
+            ...n,
+            selected: n.id === node.id
+        })))
+    }, [setNodes])
 
     const onPaneClick = useCallback(() => {
+        // 点击画布空白处，取消所有节点选择
+        setNodes((nds) => nds.map((n) => ({
+            ...n,
+            selected: false
+        })))
         setSelectedNode(null)
-    }, [])
+    }, [setNodes])
 
     const onDragOver = useCallback((event: React.DragEvent) => {
         event.preventDefault()
@@ -519,6 +541,7 @@ function App() {
                         isValidConnection={isValidConnection}
                         onNodeClick={onNodeClick}
                         onNodeDragStart={onNodeDragStart}
+                        onNodeDrag={onNodeDrag}
                         onPaneClick={onPaneClick}
                         onDragOver={onDragOver}
                         onDrop={onDrop}
