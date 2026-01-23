@@ -226,13 +226,8 @@ function App() {
         setSelectedNode(node.id)
     }, [setNodes])
 
-    const onNodeDrag = useCallback((_: any, node: any) => {
-        // 拖拽过程中，持续确保只有当前节点被选中
-        setNodes((nds) => nds.map((n) => ({
-            ...n,
-            selected: n.id === node.id
-        })))
-    }, [setNodes])
+    // 移除 onNodeDrag - 在拖拽过程中不应该修改节点状态
+    // onNodeDragStart 已经确保了正确的选择状态
 
     const onPaneClick = useCallback(() => {
         // 点击画布空白处，取消所有节点选择
@@ -541,7 +536,6 @@ function App() {
                         isValidConnection={isValidConnection}
                         onNodeClick={onNodeClick}
                         onNodeDragStart={onNodeDragStart}
-                        onNodeDrag={onNodeDrag}
                         onPaneClick={onPaneClick}
                         onDragOver={onDragOver}
                         onDrop={onDrop}
@@ -576,6 +570,9 @@ function App() {
                                     default: return '#888'
                                 }
                             }}
+                            zoomable={true}
+                            pannable={true}
+                            nodeStrokeWidth={3}
                         />
                     </ReactFlow>
                 </div>
