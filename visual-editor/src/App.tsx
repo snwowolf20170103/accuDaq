@@ -78,6 +78,7 @@ function App() {
     const [view, setView] = useState<'editor' | 'dashboard'>('editor')
     const [isRunning, setIsRunning] = useState(false)
     const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null)
+    const reactFlowInstance = useRef<any>(null)
 
     const showToast = useCallback((message: string, type: 'success' | 'error' | 'info' = 'info') => {
         setToast({ message, type })
@@ -87,7 +88,14 @@ function App() {
     useEffect(() => {
         const savedNodes = localStorage.getItem('daq-nodes')
         const savedEdges = localStorage.getItem('daq-edges')
-        if (savedNodes) setNodes(JSON.parse(savedNodes))
+        if (savedNodes) {
+            // Clear selected state when loading to prevent multiple nodes being selected
+            const parsedNodes = JSON.parse(savedNodes).map((node: any) => ({
+                ...node,
+                selected: false
+            }))
+            setNodes(parsedNodes)
+        }
         if (savedEdges) setEdges(JSON.parse(savedEdges))
     }, [])
 
@@ -204,6 +212,11 @@ function App() {
         setSelectedNode(node.id)
     }, [])
 
+    const onNodeDragStart = useCallback((_: any, node: any) => {
+        // 拖拽开始时，确保只选中当前节点
+        setSelectedNode(node.id)
+    }, [])
+
     const onPaneClick = useCallback(() => {
         setSelectedNode(null)
     }, [])
@@ -234,6 +247,9 @@ function App() {
                 id: uuidv4(),
                 type: 'daqNode',
                 position,
+                draggable: true,
+                selectable: true,
+                selected: false,
                 data: {
                     label: component.name,
                     componentType: component.type,
@@ -431,6 +447,9 @@ function App() {
                     id: pNode.id,
                     type: 'daqNode',
                     position: pNode.position || { x: 0, y: 0 },
+                    draggable: true,
+                    selectable: true,
+                    selected: false,
                     data: {
                         label: pNode.label || (component?.name || typeName),
                         componentType: typeName,
@@ -499,6 +518,7 @@ function App() {
                         onConnect={onConnect}
                         isValidConnection={isValidConnection}
                         onNodeClick={onNodeClick}
+                        onNodeDragStart={onNodeDragStart}
                         onPaneClick={onPaneClick}
                         onDragOver={onDragOver}
                         onDrop={onDrop}
@@ -506,6 +526,19 @@ function App() {
                         fitView
                         snapToGrid
                         snapGrid={[20, 20]}
+                        nodesDraggable={true}
+                        nodesConnectable={true}
+                        elementsSelectable={true}
+                        selectNodesOnDrag={false}
+                        multiSelectionKeyCode={null}
+                        panOnDrag={[1, 2]}
+                        minZoom={0.2}
+                        maxZoom={4}
+                        onlyRenderVisibleElements={false}
+                        defaultEdgeOptions={{
+                            type: 'smoothstep',
+                            animated: false,
+                        }}
                     >
                         <Background color="#2a2a4a" gap={20} />
                         <Controls />
