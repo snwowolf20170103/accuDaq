@@ -89,10 +89,12 @@ function App() {
         const savedNodes = localStorage.getItem('daq-nodes')
         const savedEdges = localStorage.getItem('daq-edges')
         if (savedNodes) {
-            // Clear selected state when loading to prevent multiple nodes being selected
+            // Ensure all nodes are unselected and draggable when loading
             const parsedNodes = JSON.parse(savedNodes).map((node: any) => ({
                 ...node,
-                selected: false
+                selected: false,
+                draggable: true,
+                selectable: true
             }))
             setNodes(parsedNodes)
         }
