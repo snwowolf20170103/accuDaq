@@ -209,34 +209,19 @@ function App() {
     )
 
     const onNodeClick = useCallback((_: any, node: any) => {
-        // 点击节点时，取消其他所有节点的选择
-        setNodes((nds) => nds.map((n) => ({
-            ...n,
-            selected: n.id === node.id
-        })))
         setSelectedNode(node.id)
-    }, [setNodes])
+    }, [])
 
-    const onNodeDragStart = useCallback((_: any, node: any) => {
-        // 拖拽开始时，确保只选中当前节点，取消其他节点选择
-        setNodes((nds) => nds.map((n) => ({
-            ...n,
-            selected: n.id === node.id
-        })))
-        setSelectedNode(node.id)
-    }, [setNodes])
+    const onNodeDragStart = useCallback(() => {
+        // 不需要在这里做任何事情，让 ReactFlow 处理
+    }, [])
 
     // 移除 onNodeDrag - 在拖拽过程中不应该修改节点状态
     // onNodeDragStart 已经确保了正确的选择状态
 
     const onPaneClick = useCallback(() => {
-        // 点击画布空白处，取消所有节点选择
-        setNodes((nds) => nds.map((n) => ({
-            ...n,
-            selected: false
-        })))
         setSelectedNode(null)
-    }, [setNodes])
+    }, [])
 
     const onDragOver = useCallback((event: React.DragEvent) => {
         event.preventDefault()
@@ -535,19 +520,17 @@ function App() {
                         onConnect={onConnect}
                         isValidConnection={isValidConnection}
                         onNodeClick={onNodeClick}
-                        onNodeDragStart={onNodeDragStart}
                         onPaneClick={onPaneClick}
                         onDragOver={onDragOver}
                         onDrop={onDrop}
                         nodeTypes={nodeTypes}
                         fitView
-                        snapToGrid
+                        snapToGrid={true}
                         snapGrid={[20, 20]}
                         nodesDraggable={true}
                         nodesConnectable={true}
                         elementsSelectable={true}
-                        selectNodesOnDrag={false}
-                        multiSelectionKeyCode={null}
+                        selectNodesOnDrag={true}
                         panOnDrag={[1, 2]}
                         minZoom={0.2}
                         maxZoom={4}
