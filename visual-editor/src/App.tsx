@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react'
+import { useState, useCallback } from 'react'
 import {
     ReactFlow,
     Background,
@@ -7,6 +7,7 @@ import {
     addEdge,
     useNodesState,
     useEdgesState,
+    useReactFlow,
     Connection,
     Edge,
     ReactFlowProvider,
@@ -78,7 +79,6 @@ function App() {
     const [view, setView] = useState<'editor' | 'dashboard'>('editor')
     const [isRunning, setIsRunning] = useState(false)
     const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null)
-    const reactFlowInstance = useRef<any>(null)
 
     const showToast = useCallback((message: string, type: 'success' | 'error' | 'info' = 'info') => {
         setToast({ message, type })
@@ -213,13 +213,6 @@ function App() {
     const onNodeClick = useCallback((_: any, node: any) => {
         setSelectedNode(node.id)
     }, [])
-
-    const onNodeDragStart = useCallback(() => {
-        // 不需要在这里做任何事情，让 ReactFlow 处理
-    }, [])
-
-    // 移除 onNodeDrag - 在拖拽过程中不应该修改节点状态
-    // onNodeDragStart 已经确保了正确的选择状态
 
     const onPaneClick = useCallback(() => {
         setSelectedNode(null)
