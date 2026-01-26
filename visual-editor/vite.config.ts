@@ -3,9 +3,34 @@ import react from '@vitejs/plugin-react'
 import fs from 'fs'
 import path from 'path'
 import { ChildProcess, spawn } from 'child_process'
+import treeKill from 'tree-kill'
 
 // Track the running engine process
 let engineProcess: ChildProcess | null = null;
+
+// PID file for cross-session tracking (handles Vite restarts)
+const PID_FILE_PATH = path.resolve(__dirname, '../.daq-engine.pid');
+
+// Helper: Kill process by PID using tree-kill (cross-platform)
+const killProcessTree = (pid: number): Promise<void> => {
+    return new Promise((resolve) => {
+        treeKill(pid, 'SIGKILL', (err) => {
+            if (err) console.log('[Cleanup] Process gone or error:', err.message);
+            resolve();
+        });
+    });
+};
+
+// Helper: Get PID from file or memory
+const getActivePid = (): number | null => {
+    if (engineProcess?.pid) return engineProcess.pid;
+    if (fs.existsSync(PID_FILE_PATH)) {
+        try {
+            return parseInt(fs.readFileSync(PID_FILE_PATH, 'utf-8').trim(), 10);
+        } catch { return null; }
+    }
+    return null;
+};
 
 export default defineConfig({
     plugins: [
@@ -59,82 +84,81 @@ export default defineConfig({
                         });
                     } else if (req.url === '/api/engine/start' && req.method === 'POST') {
                         // Start the Python DAQ engine
-                        if (engineProcess) {
-                            res.statusCode = 400;
-                            res.setHeader('Content-Type', 'application/json');
-                            res.end(JSON.stringify({ error: 'Engine already running' }));
-                            return;
-                        }
-
-                        try {
-                            const pythonPath = process.platform === 'win32' ? 'python' : 'python3';
-                            const scriptPath = path.resolve(__dirname, '../run_realtime_app.py');
-
-                            if (!fs.existsSync(scriptPath)) {
-                                res.statusCode = 404;
-                                res.setHeader('Content-Type', 'application/json');
-                                res.end(JSON.stringify({ error: 'run_realtime_app.py not found. Please compile first.' }));
-                                return;
-                            }
-
-                            engineProcess = spawn(pythonPath, [scriptPath], {
-                                cwd: path.resolve(__dirname, '..'),
-                                stdio: ['ignore', 'pipe', 'pipe']
-                            });
-
-                            engineProcess.stdout?.on('data', (data) => {
-                                console.log(`[DAQ Engine] ${data.toString()}`);
-                            });
-
-                            engineProcess.stderr?.on('data', (data) => {
-                                console.error(`[DAQ Engine Error] ${data.toString()}`);
-                            });
-
-                            engineProcess.on('close', (code) => {
-                                console.log(`[DAQ Engine] Process exited with code ${code}`);
-                                engineProcess = null;
-                            });
-
-                            engineProcess.on('error', (err) => {
-                                console.error(`[DAQ Engine] Failed to start: ${err.message}`);
-                                engineProcess = null;
-                            });
-
-                            res.statusCode = 200;
-                            res.setHeader('Content-Type', 'application/json');
-                            res.end(JSON.stringify({ status: 'started', pid: engineProcess.pid }));
-                        } catch (err: any) {
-                            res.statusCode = 500;
-                            res.setHeader('Content-Type', 'application/json');
-                            res.end(JSON.stringify({ error: err.message }));
-                        }
-                    } else if (req.url === '/api/engine/stop' && req.method === 'POST') {
-                        // Stop the Python DAQ engine
-                        if (!engineProcess) {
-                            res.statusCode = 400;
-                            res.setHeader('Content-Type', 'application/json');
-                            res.end(JSON.stringify({ error: 'No engine running' }));
-                            return;
-                        }
-
-                        try {
-                            // On Windows, use taskkill to ensure child processes are also terminated
-                            if (process.platform === 'win32') {
-                                const { execSync } = require('child_process');
-                                execSync(`taskkill /pid ${engineProcess.pid} /T /F`, { stdio: 'ignore' });
-                            } else {
-                                engineProcess.kill('SIGTERM');
+                        // Step 1: Cleanup any existing process (handles zombie processes)
+                        const existingPid = getActivePid();
+                        const startEngine = async () => {
+                            if (existingPid) {
+                                await killProcessTree(existingPid);
+                                try { fs.unlinkSync(PID_FILE_PATH); } catch { }
                             }
                             engineProcess = null;
+
+                            try {
+                                const pythonPath = process.platform === 'win32' ? 'python' : 'python3';
+                                const scriptPath = path.resolve(__dirname, '../run_realtime_app.py');
+
+                                if (!fs.existsSync(scriptPath)) {
+                                    res.statusCode = 404;
+                                    res.setHeader('Content-Type', 'application/json');
+                                    res.end(JSON.stringify({ error: 'run_realtime_app.py not found. Please compile first.' }));
+                                    return;
+                                }
+
+                                engineProcess = spawn(pythonPath, [scriptPath], {
+                                    cwd: path.resolve(__dirname, '..'),
+                                    stdio: ['ignore', 'pipe', 'pipe']
+                                });
+
+                                // Save PID to file for cross-session tracking
+                                if (engineProcess.pid) {
+                                    fs.writeFileSync(PID_FILE_PATH, String(engineProcess.pid));
+                                }
+
+                                engineProcess.stdout?.on('data', (data) => {
+                                    console.log(`[DAQ Engine] ${data.toString()}`);
+                                });
+
+                                engineProcess.stderr?.on('data', (data) => {
+                                    console.error(`[DAQ Engine Error] ${data.toString()}`);
+                                });
+
+                                engineProcess.on('close', (code) => {
+                                    console.log(`[DAQ Engine] Process exited with code ${code}`);
+                                    engineProcess = null;
+                                    try { fs.unlinkSync(PID_FILE_PATH); } catch { }
+                                });
+
+                                engineProcess.on('error', (err) => {
+                                    console.error(`[DAQ Engine] Failed to start: ${err.message}`);
+                                    engineProcess = null;
+                                    try { fs.unlinkSync(PID_FILE_PATH); } catch { }
+                                });
+
+                                res.statusCode = 200;
+                                res.setHeader('Content-Type', 'application/json');
+                                res.end(JSON.stringify({ status: 'started', pid: engineProcess.pid }));
+                            } catch (err: any) {
+                                res.statusCode = 500;
+                                res.setHeader('Content-Type', 'application/json');
+                                res.end(JSON.stringify({ error: err.message }));
+                            }
+                        };
+                        startEngine();
+                    } else if (req.url === '/api/engine/stop' && req.method === 'POST') {
+                        // Stop the Python DAQ engine (cross-platform with tree-kill)
+                        const stopEngine = async () => {
+                            const pid = getActivePid();
+                            if (pid) {
+                                await killProcessTree(pid);
+                            }
+                            engineProcess = null;
+                            try { fs.unlinkSync(PID_FILE_PATH); } catch { }
 
                             res.statusCode = 200;
                             res.setHeader('Content-Type', 'application/json');
                             res.end(JSON.stringify({ status: 'stopped' }));
-                        } catch (err: any) {
-                            res.statusCode = 500;
-                            res.setHeader('Content-Type', 'application/json');
-                            res.end(JSON.stringify({ error: err.message }));
-                        }
+                        };
+                        stopEngine();
                     } else if (req.url === '/api/engine/status' && req.method === 'GET') {
                         // Check engine status
                         res.statusCode = 200;

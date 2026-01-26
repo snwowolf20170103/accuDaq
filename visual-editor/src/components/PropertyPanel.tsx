@@ -28,7 +28,7 @@ const PropertyPanel = ({ node, onPropertyChange }: PropertyPanelProps) => {
         )
     }
 
-    const nodeData = node.data as DAQNodeData
+    const nodeData = node.data as unknown as DAQNodeData
     const componentDef = componentLibrary.find(c => c.type === nodeData.componentType)
     const propertySchema = componentDef?.propertySchema || []
     const isCustomScript = nodeData.componentType === 'custom_script'
@@ -39,6 +39,12 @@ const PropertyPanel = ({ node, onPropertyChange }: PropertyPanelProps) => {
             parsedValue = parseFloat(value) || 0
         } else if (type === 'boolean') {
             parsedValue = value === 'true' || value === true
+        } else if (type === 'select') {
+            // 对于 select，尝试保持原始类型（数值选项应返回数值）
+            const numValue = parseFloat(value)
+            if (!isNaN(numValue) && String(numValue) === value) {
+                parsedValue = numValue
+            }
         }
         onPropertyChange(node.id, key, parsedValue)
     }
@@ -139,11 +145,16 @@ const PropertyPanel = ({ node, onPropertyChange }: PropertyPanelProps) => {
                                     value={nodeData.properties[prop.key] ?? prop.default ?? ''}
                                     onChange={(e) => handleChange(prop.key, e.target.value, prop.type)}
                                 >
-                                    {prop.options?.map(opt => (
-                                        <option key={opt.value} value={opt.value}>
-                                            {opt.label}
-                                        </option>
-                                    ))}
+                                    {prop.options?.map((opt, idx) => {
+                                        // 支持两种格式：string[] 和 {value, label}[]
+                                        const optValue = typeof opt === 'string' ? opt : opt.value;
+                                        const optLabel = typeof opt === 'string' ? opt : opt.label;
+                                        return (
+                                            <option key={idx} value={optValue}>
+                                                {optLabel}
+                                            </option>
+                                        );
+                                    })}
                                 </select>
                             ) : prop.type === 'boolean' ? (
                                 <select

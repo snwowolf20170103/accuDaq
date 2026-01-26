@@ -1,0 +1,158 @@
+.debug-overlay {
+    position: absolute;
+    top: -8px;
+    left: -8px;
+    right: -8px;
+    bottom: -8px;
+    pointer-events: none;
+    z-index: 100;
+    border-radius: 12px;
+    transition: all 0.3s ease;
+}
+
+.debug-overlay.executing {
+    box-shadow: 0 0 20px rgba(46, 204, 113, 0.6),
+                0 0 40px rgba(46, 204, 113, 0.3);
+    border: 2px solid #2ecc71;
+}
+
+.breakpoint-indicator {
+    position: absolute;
+    top: -4px;
+    left: -4px;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    cursor: pointer;
+    pointer-events: auto;
+    opacity: 0.3;
+    transition: all 0.2s;
+    border-radius: 50%;
+    background: transparent;
+}
+
+.breakpoint-indicator:hover {
+    opacity: 1;
+    transform: scale(1.2);
+}
+
+.breakpoint-indicator.active {
+    opacity: 1;
+    animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+}
+
+.port-values-toggle {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    cursor: pointer;
+    pointer-events: auto;
+    opacity: 0.6;
+    transition: all 0.2s;
+}
+
+.port-values-toggle:hover {
+    opacity: 1;
+}
+
+.port-values-popup {
+    position: absolute;
+    top: 24px;
+    right: 0;
+    min-width: 180px;
+    background: #1a1a2e;
+    border: 1px solid #3a3a5a;
+    border-radius: 8px;
+    padding: 10px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+    z-index: 1000;
+}
+
+.port-values-title {
+    font-size: 11px;
+    color: #888;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 8px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid #2a2a4a;
+}
+
+.port-value-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 4px 0;
+    font-size: 12px;
+}
+
+.port-name {
+    color: #4a90d9;
+    font-weight: 500;
+}
+
+.port-value {
+    color: #2ecc71;
+    font-family: monospace;
+    max-width: 100px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.executing-indicator {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+}
+
+.pulse-ring {
+    width: 100%;
+    height: 100%;
+    border-radius: 12px;
+    animation: pulseRing 1s ease-out infinite;
+}
+
+@keyframes pulseRing {
+    0% {
+        box-shadow: 0 0 0 0 rgba(46, 204, 113, 0.4);
+    }
+    100% {
+        box-shadow: 0 0 0 20px rgba(46, 204, 113, 0);
+    }
+}
+
+/* Data flow animation on edges */
+.react-flow__edge.executing path {
+    stroke: #2ecc71;
+    stroke-width: 3;
+}
+
+.react-flow__edge.executing .react-flow__edge-interaction {
+    stroke: #2ecc71;
+}
+
+/* Debug mode global styles */
+.debug-mode .react-flow__node {
+    transition: all 0.3s ease;
+}
+
+.debug-mode .react-flow__edge path {
+    transition: stroke 0.3s ease, stroke-width 0.3s ease;
+}

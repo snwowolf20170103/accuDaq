@@ -33,6 +33,39 @@ NODE_TYPE_MAPPING = {
     # 存储组件
     "daq:csv_write": "CSVStorage",
     "daq:csv_storage": "CSVStorage",
+
+    # 高级算法组件
+    "daq:fft": "FFT",
+    "daq:moving_average_filter": "MovingAverageFilter",
+    "daq:low_pass_filter": "LowPassFilter",
+    "daq:high_pass_filter": "HighPassFilter",
+    "daq:pid_controller": "PIDController",
+    "daq:kalman_filter": "KalmanFilter",
+    "daq:statistics": "Statistics",
+
+    # 复杂协议组件 - EtherCAT
+    "daq:ethercat_master": "EtherCATMaster",
+    "daq:ethercat_slave_io": "EtherCATSlaveIO",
+
+    # 复杂协议组件 - CANopen
+    "daq:canopen_master": "CANopenMaster",
+    "daq:canopen_node": "CANopenNode",
+    "daq:canopen_pdo": "CANopenPDO",
+
+    # 复杂协议组件 - OPC UA
+    "daq:opcua_client": "OPCUAClient",
+    "daq:opcua_node_reader": "OPCUANodeReader",
+    "daq:opcua_node_writer": "OPCUANodeWriter",
+    "daq:opcua_subscription": "OPCUASubscription",
+
+    # FPGA 组件
+    "daq:fpga_device": "FPGADevice",
+    "daq:fpga_register_read": "FPGARegisterRead",
+    "daq:fpga_register_write": "FPGARegisterWrite",
+    "daq:fpga_adc": "FPGAADC",
+    "daq:fpga_dac": "FPGADAC",
+    "daq:fpga_dma": "FPGADMA",
+    "daq:fpga_pwm": "FPGAPWM",
 }
 
 

@@ -17,8 +17,10 @@ class ComponentType(Enum):
     DEVICE = "device"           # 设备组件（数据源）
     COMMUNICATION = "communication"  # 通信组件
     LOGIC = "logic"             # 逻辑处理组件
+    PROCESS = "process"         # 处理组件（数据处理/转换）
     STORAGE = "storage"         # 存储组件
     DISPLAY = "display"         # 显示组件
+    CONTROL = "control"         # 控制组件（定时、流程控制）
 
 
 class PortType(Enum):
@@ -157,12 +159,28 @@ class ComponentRegistry:
         return cls._instance
 
     @classmethod
-    def register(cls, component_class: type):
-        """注册组件类"""
-        name = component_class.component_name
-        cls._registry[name] = component_class
-        logger.debug(f"注册组件: {name}")
-        return component_class
+    def register(cls, name_or_class=None):
+        """
+        注册组件类
+        支持两种用法：
+        1. @ComponentRegistry.register          - 使用类的 component_name
+        2. @ComponentRegistry.register('Name')  - 使用指定名称
+        """
+        def decorator(component_class: type):
+            # 如果提供了名称字符串，使用它；否则使用类的 component_name
+            if isinstance(name_or_class, str):
+                name = name_or_class
+            else:
+                name = component_class.component_name
+            cls._registry[name] = component_class
+            logger.debug(f"注册组件: {name}")
+            return component_class
+        
+        # 如果直接传入了类（不带参数的装饰器），直接注册
+        if isinstance(name_or_class, type):
+            return decorator(name_or_class)
+        # 否则返回装饰器函数
+        return decorator
 
     @classmethod
     def get(cls, name: str) -> Optional[type]:

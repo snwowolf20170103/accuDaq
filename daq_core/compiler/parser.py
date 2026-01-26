@@ -214,7 +214,7 @@ class DAQProjectParser:
             device = Device(
                 id=item["id"],
                 name=item.get("name", item["id"]),
-                protocol=item["protocol"],
+                protocol=item.get("protocol", item.get("type", "unknown")),
                 config=item.get("config", {})
             )
             devices.append(device)
@@ -261,13 +261,32 @@ class DAQProjectParser:
                     port_id=item["binding"].get("portId", "")
                 )
 
+            # Handle layout - can come from 'layout', 'position', or 'config'
+            layout_data = item.get("layout") or item.get("position") or {}
+            if not layout_data and "config" in item:
+                # Try to extract layout from config
+                cfg = item.get("config", {})
+                layout_data = {
+                    "x": cfg.get("x", 0),
+                    "y": cfg.get("y", 0),
+                    "w": cfg.get("w", cfg.get("width", 2)),
+                    "h": cfg.get("h", cfg.get("height", 2))
+                }
+            # Ensure layout has required fields with defaults
+            layout = {
+                "x": layout_data.get("x", 0),
+                "y": layout_data.get("y", 0),
+                "w": layout_data.get("w", 2),
+                "h": layout_data.get("h", 2)
+            }
+
             widget = Widget(
                 id=item["id"],
                 type=item["type"],
-                label=item.get("label", ""),
-                layout=item["layout"],
+                label=item.get("label", item.get("title", "")),
+                layout=layout,
                 binding=binding,
-                properties=item.get("properties", {})
+                properties=item.get("properties", item.get("config", {}))
             )
             widgets.append(widget)
 

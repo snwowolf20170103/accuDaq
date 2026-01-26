@@ -1,0 +1,721 @@
+/* ============ 电力行业控件 ============ */
+.power-meter {
+    background: linear-gradient(145deg, #1a1a2e 0%, #16161d 100%);
+    border-radius: 12px;
+    padding: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.meter-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.meter-icon {
+    font-size: 1.25rem;
+}
+
+.meter-title {
+    color: #cdd6f4;
+    font-weight: 500;
+}
+
+.meter-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+}
+
+.meter-item {
+    text-align: center;
+    padding: 10px;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 8px;
+}
+
+.meter-item.highlight {
+    background: rgba(59, 130, 246, 0.15);
+    border: 1px solid rgba(59, 130, 246, 0.3);
+}
+
+.item-label {
+    display: block;
+    font-size: 0.7rem;
+    color: #6b7280;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+}
+
+.item-value {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #cdd6f4;
+    font-family: 'JetBrains Mono', monospace;
+}
+
+.item-unit {
+    font-size: 0.75rem;
+    color: #6b7280;
+    margin-left: 2px;
+}
+
+/* 谐波图表 */
+.harmonic-chart {
+    background: linear-gradient(145deg, #1a1a2e 0%, #16161d 100%);
+    border-radius: 12px;
+    padding: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.chart-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+    color: #cdd6f4;
+}
+
+.thd-value {
+    font-size: 0.875rem;
+    color: #f59e0b;
+    font-weight: 500;
+}
+
+.harmonic-bars {
+    display: flex;
+    align-items: flex-end;
+    gap: 4px;
+    height: 100px;
+}
+
+.bar-container {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    height: 100%;
+}
+
+.bar {
+    width: 100%;
+    min-height: 4px;
+    border-radius: 2px 2px 0 0;
+    transition: height 0.3s ease;
+}
+
+.bar-label {
+    font-size: 0.6rem;
+    color: #6b7280;
+    margin-top: 4px;
+}
+
+/* 电力系统节点 */
+.power-node {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 12px;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 8px;
+    border: 2px solid #3b82f6;
+}
+
+.power-node.status-warning {
+    border-color: #f59e0b;
+}
+
+.power-node.status-fault {
+    border-color: #ef4444;
+    animation: fault-blink 0.5s infinite;
+}
+
+.power-node.status-offline {
+    border-color: #6b7280;
+    opacity: 0.5;
+}
+
+@keyframes fault-blink {
+
+    0%,
+    100% {
+        border-color: #ef4444;
+    }
+
+    50% {
+        border-color: transparent;
+    }
+}
+
+.node-symbol {
+    font-family: monospace;
+    font-size: 1.5rem;
+    color: #cdd6f4;
+}
+
+.node-info {
+    text-align: center;
+    margin-top: 8px;
+}
+
+.node-name {
+    display: block;
+    font-size: 0.75rem;
+    color: #cdd6f4;
+}
+
+.node-value {
+    display: block;
+    font-size: 0.7rem;
+    color: #6b7280;
+}
+
+/* ============ 工业控制控件 ============ */
+.plc-status {
+    background: linear-gradient(145deg, #1a1a2e 0%, #16161d 100%);
+    border-radius: 12px;
+    padding: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.plc-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.plc-name {
+    color: #cdd6f4;
+    font-weight: 500;
+}
+
+.plc-mode {
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: white;
+}
+
+.plc-stats {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 16px;
+}
+
+.plc-stats .stat {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.75rem;
+    color: #6b7280;
+}
+
+.stat-bar {
+    width: 60px;
+    height: 6px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.stat-bar div {
+    height: 100%;
+    background: #3b82f6;
+    border-radius: 3px;
+}
+
+.plc-io {
+    display: flex;
+    gap: 24px;
+}
+
+.io-group {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.io-label {
+    font-size: 0.7rem;
+    color: #6b7280;
+    width: 12px;
+}
+
+.io-led {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #333;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.io-led.on {
+    background: #10b981;
+    box-shadow: 0 0 6px #10b981;
+}
+
+.io-led.output.on {
+    background: #f59e0b;
+    box-shadow: 0 0 6px #f59e0b;
+}
+
+/* 工业仪表盘 */
+.industrial-gauge {
+    text-align: center;
+}
+
+.gauge-svg {
+    width: 100%;
+    max-width: 200px;
+}
+
+.gauge-label {
+    margin-top: 8px;
+    color: #6b7280;
+    font-size: 0.875rem;
+}
+
+/* 流程监控 */
+.process-flow {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px;
+    overflow-x: auto;
+}
+
+.process-stage {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 16px;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 12px;
+    min-width: 100px;
+    border: 2px solid rgba(255, 255, 255, 0.1);
+}
+
+.process-stage.stage-running {
+    border-color: #3b82f6;
+    background: rgba(59, 130, 246, 0.1);
+}
+
+.process-stage.stage-complete {
+    border-color: #10b981;
+}
+
+.process-stage.stage-error {
+    border-color: #ef4444;
+}
+
+.stage-icon {
+    font-size: 1.5rem;
+}
+
+.stage-name {
+    font-size: 0.8rem;
+    color: #cdd6f4;
+}
+
+.stage-progress {
+    width: 100%;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.stage-progress div {
+    height: 100%;
+    background: #3b82f6;
+}
+
+.process-arrow {
+    color: #6b7280;
+    font-size: 1.5rem;
+}
+
+.process-arrow.active {
+    color: #10b981;
+}
+
+/* ============ 医疗行业控件 ============ */
+.bio-waveform {
+    background: #0a0a0f;
+    border-radius: 8px;
+    padding: 8px;
+}
+
+.waveform-header {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.75rem;
+    font-weight: 600;
+    margin-bottom: 4px;
+}
+
+.waveform-svg {
+    display: block;
+}
+
+/* 生命体征 */
+.vital-signs {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 12px;
+}
+
+.vital-item {
+    text-align: center;
+    padding: 16px;
+    border-radius: 12px;
+    background: rgba(0, 0, 0, 0.2);
+}
+
+.vital-item.hr {
+    border-left: 4px solid #10b981;
+}
+
+.vital-item.spo2 {
+    border-left: 4px solid #3b82f6;
+}
+
+.vital-item.bp {
+    border-left: 4px solid #8b5cf6;
+}
+
+.vital-item.temp {
+    border-left: 4px solid #f59e0b;
+}
+
+.vital-item.resp {
+    border-left: 4px solid #06b6d4;
+}
+
+.vital-icon {
+    font-size: 1.5rem;
+    display: block;
+    margin-bottom: 8px;
+}
+
+.vital-data {
+    display: flex;
+    align-items: baseline;
+    justify-content: center;
+    gap: 4px;
+}
+
+.vital-value {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: #cdd6f4;
+    font-family: 'JetBrains Mono', monospace;
+}
+
+.vital-unit {
+    font-size: 0.875rem;
+    color: #6b7280;
+}
+
+.vital-label {
+    display: block;
+    font-size: 0.7rem;
+    color: #6b7280;
+    margin-top: 8px;
+    text-transform: uppercase;
+}
+
+/* ============ 汽车电子控件 ============ */
+.car-dashboard {
+    background: linear-gradient(145deg, #0d0d12 0%, #1a1a24 100%);
+    border-radius: 16px;
+    padding: 24px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.dash-main {
+    display: flex;
+    justify-content: space-around;
+    margin-bottom: 20px;
+}
+
+.speedometer,
+.tachometer {
+    text-align: center;
+}
+
+.speed-value,
+.rpm-value {
+    font-size: 3rem;
+    font-weight: 700;
+    color: #cdd6f4;
+    font-family: 'JetBrains Mono', monospace;
+}
+
+.speed-unit,
+.rpm-unit {
+    font-size: 0.875rem;
+    color: #6b7280;
+}
+
+.dash-center {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.gear-display {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: #10b981;
+    margin-bottom: 4px;
+}
+
+.odometer {
+    font-size: 0.875rem;
+    color: #6b7280;
+    font-family: 'JetBrains Mono', monospace;
+}
+
+.dash-gauges {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 16px;
+}
+
+.mini-gauge {
+    flex: 1;
+    height: 24px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 12px;
+    overflow: hidden;
+    position: relative;
+}
+
+.mini-gauge .gauge-fill {
+    position: absolute;
+    left: 0;
+    top: 0;
+    height: 100%;
+    background: #3b82f6;
+    border-radius: 12px;
+}
+
+.mini-gauge span {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    font-size: 0.75rem;
+    color: #cdd6f4;
+}
+
+.dash-indicators {
+    display: flex;
+    justify-content: center;
+    gap: 16px;
+}
+
+.indicator {
+    font-size: 1.25rem;
+    opacity: 0.3;
+}
+
+.indicator.on {
+    opacity: 1;
+}
+
+.indicator.warning {
+    animation: indicator-blink 1s infinite;
+}
+
+.indicator.error {
+    animation: indicator-blink 0.5s infinite;
+}
+
+@keyframes indicator-blink {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.3;
+    }
+}
+
+/* OBD 诊断 */
+.obd-diagnostics {
+    background: linear-gradient(145deg, #1a1a2e 0%, #16161d 100%);
+    border-radius: 12px;
+    padding: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.obd-header {
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.obd-header h3 {
+    margin: 0 0 8px 0;
+    color: #cdd6f4;
+}
+
+.vehicle-info {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 0.8rem;
+    color: #6b7280;
+}
+
+.vin {
+    font-family: monospace;
+    font-size: 0.7rem;
+}
+
+.obd-section {
+    margin-bottom: 16px;
+}
+
+.obd-section h4 {
+    margin: 0 0 12px 0;
+    font-size: 0.875rem;
+    color: #a78bfa;
+}
+
+.dtc-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.no-dtc {
+    text-align: center;
+    padding: 20px;
+    color: #10b981;
+}
+
+.dtc-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px;
+    border-radius: 8px;
+}
+
+.dtc-item.dtc-info {
+    background: rgba(59, 130, 246, 0.15);
+}
+
+.dtc-item.dtc-warning {
+    background: rgba(245, 158, 11, 0.15);
+}
+
+.dtc-item.dtc-error {
+    background: rgba(239, 68, 68, 0.15);
+}
+
+.dtc-code {
+    font-family: monospace;
+    font-weight: 600;
+    color: #cdd6f4;
+}
+
+.dtc-desc {
+    font-size: 0.8rem;
+    color: #6b7280;
+}
+
+.live-data-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+}
+
+.data-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 12px;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 6px;
+}
+
+.data-name {
+    font-size: 0.75rem;
+    color: #6b7280;
+}
+
+.data-value {
+    font-family: monospace;
+    font-size: 0.8rem;
+    color: #cdd6f4;
+}
+
+/* ============ 工业控件展示页面 ============ */
+.industry-widgets-showcase {
+    padding: 24px;
+    height: 100%;
+    overflow-y: auto;
+    background: linear-gradient(180deg, #0d0d12 0%, #1a1a2e 100%);
+}
+
+.showcase-header {
+    text-align: center;
+    margin-bottom: 32px;
+    padding-bottom: 24px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.showcase-header h1 {
+    margin: 0 0 8px 0;
+    font-size: 2rem;
+    color: #cdd6f4;
+    background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.showcase-header p {
+    margin: 0;
+    color: #6b7280;
+    font-size: 1rem;
+}
+
+.showcase-section {
+    margin-bottom: 32px;
+}
+
+.showcase-section h2 {
+    margin: 0 0 16px 0;
+    font-size: 1.25rem;
+    color: #cdd6f4;
+    padding-left: 12px;
+    border-left: 3px solid #3b82f6;
+}
+
+.showcase-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 16px;
+}
+
+.power-nodes-demo {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    padding: 16px;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 12px;
+}

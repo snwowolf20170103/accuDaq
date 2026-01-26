@@ -2,9 +2,65 @@ import { ComponentDefinition } from '../types'
 import componentLibrary from '../data/componentLibrary'
 
 const ComponentLibrary = () => {
+    // Helper to create a custom drag ghost image
+    const createDragGhost = (component: ComponentDefinition) => {
+        const ghost = document.createElement('div')
+        ghost.style.width = '200px'
+        ghost.style.height = '100px' // Approximation of node size
+        ghost.style.background = '#2a2a4a'
+        ghost.style.border = '1px solid #4a90d9'
+        ghost.style.borderRadius = '8px'
+        ghost.style.display = 'flex'
+        ghost.style.alignItems = 'center'
+        ghost.style.padding = '10px'
+        ghost.style.gap = '10px'
+        ghost.style.position = 'absolute'
+        ghost.style.top = '-1000px'
+        ghost.style.left = '-1000px'
+        ghost.style.zIndex = '9999'
+        ghost.style.color = '#fff'
+        ghost.style.boxShadow = '0 8px 16px rgba(0,0,0,0.4)'
+
+        // Add icon
+        const icon = document.createElement('div')
+        icon.innerHTML = component.icon
+        icon.style.fontSize = '24px'
+        ghost.appendChild(icon)
+
+        // Add text
+        const text = document.createElement('div')
+        text.innerText = component.name
+        text.style.fontSize = '14px'
+        text.style.fontWeight = 'bold'
+        ghost.appendChild(text)
+
+        document.body.appendChild(ghost)
+        return ghost
+    }
+
     const onDragStart = (event: React.DragEvent, component: ComponentDefinition) => {
-        event.dataTransfer.setData('application/daq-component', JSON.stringify(component))
+        // Calculate offset
+        const target = event.currentTarget as HTMLElement
+        const rect = target.getBoundingClientRect()
+        const offsetX = event.clientX - rect.left
+        const offsetY = event.clientY - rect.top
+
+        const dragData = {
+            component,
+            offset: { x: offsetX, y: offsetY }
+        }
+
+        event.dataTransfer.setData('application/daq-component', JSON.stringify(dragData))
         event.dataTransfer.effectAllowed = 'move'
+
+        // Set custom drag image
+        const ghost = createDragGhost(component)
+        event.dataTransfer.setDragImage(ghost, offsetX, offsetY)
+
+        // Remove ghost from DOM after a short delay (browser takes a snapshot)
+        setTimeout(() => {
+            document.body.removeChild(ghost)
+        }, 0)
     }
 
     const deviceComponents = componentLibrary.filter(c => c.category === 'device')

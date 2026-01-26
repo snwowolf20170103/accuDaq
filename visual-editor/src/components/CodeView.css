@@ -1,0 +1,149 @@
+.code-view {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    background: #0a0a14;
+}
+
+.code-view-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 20px;
+    background: #16213e;
+    border-bottom: 1px solid #2a2a4a;
+}
+
+.code-view-title {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.back-btn {
+    background: #2a2a4a;
+    border: none;
+    color: #fff;
+    padding: 8px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.2s;
+}
+
+.back-btn:hover {
+    background: #3a3a5a;
+}
+
+.code-title {
+    color: #fff;
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.code-view-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.code-btn {
+    background: #2a2a4a;
+    border: none;
+    color: #fff;
+    padding: 8px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 500;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.code-btn:hover {
+    background: #3a3a5a;
+}
+
+.code-btn.primary {
+    background: #4a90d9;
+}
+
+.code-btn.primary:hover {
+    background: #5aa0e9;
+}
+
+.code-view-content {
+    flex: 1;
+    overflow: auto;
+    padding: 0;
+}
+
+.code-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: #888;
+    font-size: 16px;
+}
+
+.code-block {
+    margin: 0;
+    padding: 20px;
+    background: #0f0f1a;
+    color: #e0e0e0;
+    font-family: 'Fira Code', 'Monaco', 'Consolas', monospace;
+    font-size: 13px;
+    line-height: 1.6;
+    white-space: pre;
+    overflow-x: auto;
+    min-height: 100%;
+}
+
+.code-block code {
+    display: block;
+}
+
+/* Syntax highlighting styles */
+.code-block .keyword {
+    color: #c678dd;
+}
+
+.code-block .string {
+    color: #98c379;
+}
+
+.code-block .comment {
+    color: #5c6370;
+    font-style: italic;
+}
+
+.code-block .function {
+    color: #61afef;
+}
+
+.code-block .number {
+    color: #d19a66;
+}
+
+.code-view-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 20px;
+    background: #16213e;
+    border-top: 1px solid #2a2a4a;
+}
+
+.code-info {
+    color: #888;
+    font-size: 13px;
+}
+
+.code-note {
+    color: #e67e22;
+    font-size: 12px;
+    font-style: italic;
+}

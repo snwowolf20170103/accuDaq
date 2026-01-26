@@ -1,0 +1,474 @@
+/* DataFlowDebugger Styles */
+
+.data-flow-debugger {
+    position: fixed;
+    right: 0;
+    top: 50px;
+    bottom: 0;
+    width: 400px;
+    background: linear-gradient(180deg, #1a1a2e 0%, #16162a 100%);
+    border-left: 1px solid #2a2a4a;
+    display: flex;
+    flex-direction: column;
+    z-index: 100;
+    box-shadow: -4px 0 20px rgba(0, 0, 0, 0.3);
+}
+
+.debugger-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    background: rgba(0, 0, 0, 0.2);
+    border-bottom: 1px solid #2a2a4a;
+}
+
+.debugger-header h3 {
+    margin: 0;
+    color: #fff;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.debugger-controls {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.control-btn {
+    background: #2a2a4a;
+    border: none;
+    color: #fff;
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.2s;
+}
+
+.control-btn:hover {
+    background: #3a3a5a;
+}
+
+.control-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.control-btn.active {
+    background: #3498db;
+}
+
+.close-btn {
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    color: #888;
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 12px;
+    transition: all 0.2s;
+}
+
+.close-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+    color: #fff;
+}
+
+.debugger-tabs {
+    display: flex;
+    padding: 8px;
+    gap: 4px;
+    background: rgba(0, 0, 0, 0.1);
+    border-bottom: 1px solid #2a2a4a;
+}
+
+.debugger-tabs .tab {
+    flex: 1;
+    padding: 8px 12px;
+    background: transparent;
+    border: none;
+    color: #888;
+    font-size: 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.debugger-tabs .tab:hover {
+    background: rgba(255, 255, 255, 0.05);
+    color: #aaa;
+}
+
+.debugger-tabs .tab.active {
+    background: #2a2a4a;
+    color: #fff;
+}
+
+.debugger-content {
+    flex: 1;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Execution Panel */
+.execution-panel {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.execution-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 12px;
+    background: rgba(0, 0, 0, 0.2);
+    border-bottom: 1px solid #2a2a4a;
+}
+
+.execution-toolbar label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: #888;
+    font-size: 12px;
+}
+
+.execution-toolbar input[type="checkbox"] {
+    accent-color: #3498db;
+}
+
+.execution-toolbar button {
+    background: #2a2a4a;
+    border: none;
+    color: #888;
+    padding: 4px 12px;
+    border-radius: 4px;
+    font-size: 11px;
+    cursor: pointer;
+}
+
+.execution-toolbar button:hover {
+    background: #3a3a5a;
+    color: #fff;
+}
+
+.execution-history {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px;
+}
+
+.empty-state {
+    color: #666;
+    text-align: center;
+    padding: 40px 20px;
+    font-size: 13px;
+}
+
+.execution-event {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 6px;
+    padding: 8px 12px;
+    margin-bottom: 6px;
+    border-left: 3px solid #888;
+}
+
+.execution-event.error {
+    background: rgba(231, 76, 60, 0.1);
+}
+
+.event-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+}
+
+.event-time {
+    color: #666;
+    font-family: monospace;
+    font-size: 11px;
+}
+
+.event-node {
+    color: #fff;
+    font-weight: 500;
+}
+
+.event-type {
+    margin-left: auto;
+    font-size: 11px;
+}
+
+.event-data {
+    margin-top: 6px;
+    padding: 6px 8px;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 4px;
+    font-size: 11px;
+    overflow-x: auto;
+}
+
+.event-data code {
+    color: #9b59b6;
+    font-family: 'Fira Code', monospace;
+    white-space: pre-wrap;
+    word-break: break-all;
+}
+
+.event-error {
+    margin-top: 6px;
+    color: #e74c3c;
+    font-size: 12px;
+}
+
+/* Probes Panel */
+.probes-panel {
+    padding: 12px;
+    overflow-y: auto;
+}
+
+.probes-info {
+    color: #888;
+    font-size: 12px;
+    text-align: center;
+    padding: 8px;
+    background: rgba(52, 152, 219, 0.1);
+    border-radius: 6px;
+    margin-bottom: 12px;
+}
+
+.probe-item {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 8px;
+}
+
+.probe-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.probe-route {
+    color: #fff;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.probe-port {
+    color: #27ae60;
+    font-size: 11px;
+    font-family: monospace;
+}
+
+.remove-probe {
+    margin-left: auto;
+    background: rgba(231, 76, 60, 0.2);
+    border: none;
+    color: #e74c3c;
+    width: 20px;
+    height: 20px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 10px;
+}
+
+.remove-probe:hover {
+    background: rgba(231, 76, 60, 0.4);
+}
+
+.probe-values {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 4px;
+    padding: 8px;
+}
+
+.no-data {
+    color: #666;
+    font-size: 11px;
+    font-style: italic;
+}
+
+.value-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.value-item {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+}
+
+.value-time {
+    color: #666;
+    font-family: monospace;
+}
+
+.value-data {
+    color: #9b59b6;
+    font-family: 'Fira Code', monospace;
+    max-width: 200px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Watch Panel */
+.watch-panel {
+    padding: 12px;
+    overflow-y: auto;
+}
+
+.watch-header {
+    color: #fff;
+    font-size: 13px;
+    font-weight: 500;
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #2a2a4a;
+}
+
+.watch-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.watch-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 12px;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 6px;
+    font-size: 12px;
+}
+
+.watch-name {
+    color: #3498db;
+    font-weight: 500;
+}
+
+.watch-value {
+    color: #27ae60;
+    font-family: 'Fira Code', monospace;
+}
+
+/* Breakpoints Section */
+.breakpoints-section {
+    border-top: 1px solid #2a2a4a;
+    padding: 12px;
+    max-height: 150px;
+    overflow-y: auto;
+}
+
+.section-title {
+    color: #fff;
+    font-size: 12px;
+    font-weight: 500;
+    margin-bottom: 8px;
+}
+
+.breakpoints-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.breakpoint-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 10px;
+    background: rgba(231, 76, 60, 0.1);
+    border-radius: 4px;
+    font-size: 12px;
+    color: #e74c3c;
+}
+
+.breakpoint-item button {
+    background: transparent;
+    border: none;
+    color: #888;
+    font-size: 11px;
+    cursor: pointer;
+}
+
+.breakpoint-item button:hover {
+    color: #fff;
+}
+
+/* Current Execution Indicator */
+.current-execution {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    background: rgba(52, 152, 219, 0.15);
+    border-top: 1px solid #3498db;
+    color: #3498db;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.pulse-dot {
+    width: 8px;
+    height: 8px;
+    background: #3498db;
+    border-radius: 50%;
+    animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+
+    0%,
+    100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+
+    50% {
+        opacity: 0.5;
+        transform: scale(1.2);
+    }
+}
+
+/* Scrollbar Styles */
+.execution-history::-webkit-scrollbar,
+.probes-panel::-webkit-scrollbar,
+.watch-panel::-webkit-scrollbar,
+.breakpoints-list::-webkit-scrollbar {
+    width: 6px;
+}
+
+.execution-history::-webkit-scrollbar-track,
+.probes-panel::-webkit-scrollbar-track,
+.watch-panel::-webkit-scrollbar-track,
+.breakpoints-list::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.execution-history::-webkit-scrollbar-thumb,
+.probes-panel::-webkit-scrollbar-thumb,
+.watch-panel::-webkit-scrollbar-thumb,
+.breakpoints-list::-webkit-scrollbar-thumb {
+    background: #3a3a5a;
+    border-radius: 3px;
+}
+
+.execution-history::-webkit-scrollbar-thumb:hover,
+.probes-panel::-webkit-scrollbar-thumb:hover,
+.watch-panel::-webkit-scrollbar-thumb:hover,
+.breakpoints-list::-webkit-scrollbar-thumb:hover {
+    background: #4a4a6a;
+}

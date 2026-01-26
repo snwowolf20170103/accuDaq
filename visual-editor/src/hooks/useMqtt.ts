@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import mqtt from 'mqtt'
 
-interface MqttMessage {
+export interface MqttMessage {
     topic: string
     payload: any
     timestamp: number

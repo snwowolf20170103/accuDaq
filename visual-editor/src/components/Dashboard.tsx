@@ -2,13 +2,15 @@ import { useEffect } from 'react'
 import { useMqtt } from '../hooks/useMqtt'
 import { LineChartWidget } from './widgets/LineChartWidget'
 import { GaugeWidget } from './widgets/GaugeWidget'
+import { DAQWidget } from '../types'
 
 interface DashboardProps {
     nodes: any[]
     isRunning: boolean
+    widgets?: DAQWidget[]
 }
 
-const Dashboard = ({ nodes, isRunning }: DashboardProps) => {
+const Dashboard = ({ nodes, isRunning, widgets = [] }: DashboardProps) => {
     // Extract MQTT config from nodes
     const mqttNode = nodes.find(n => n.data.properties.broker_host && n.data.properties.topic)
     const brokerHost = mqttNode?.data.properties.broker_host
@@ -25,10 +27,17 @@ const Dashboard = ({ nodes, isRunning }: DashboardProps) => {
                 // Also subscribe to the processed version of the topic
                 subscribe(`${mainTopic}/processed`)
             }
+            // Subscribe widget-defined topics (supports both topic + dataSource)
+            widgets.forEach((w) => {
+                const t = w.config?.topic || w.config?.dataSource
+                if (typeof t === 'string' && t.length > 0) {
+                    subscribe(t)
+                }
+            })
             subscribe('accudaq/#')
             subscribe('sensors/temperature')
         }
-    }, [isConnected, isRunning, subscribe, mainTopic])
+    }, [isConnected, isRunning, subscribe, mainTopic, widgets])
 
     if (!isRunning) {
         return (
@@ -88,49 +97,109 @@ const Dashboard = ({ nodes, isRunning }: DashboardProps) => {
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: 20 }}>
 
-                {/* Temperature Chart */}
-                <div className="widget-card" style={{ background: '#1a1a2e', borderRadius: 12, padding: 20, border: '1px solid #2a2a4a', height: 300 }}>
-                    <LineChartWidget
-                        label="Temperature History (Sine)"
-                        data={history['sensors/temperature'] || []}
-                        dataKey="value"
-                        color="#4a90d9"
-                    />
-                </div>
+                {/* Render project-configured widgets first */}
+                {widgets.map(widget => {
+                    const topic = widget.config?.topic || widget.config?.dataSource || mainTopic || 'sensors/temperature'
+                    const label = widget.config?.label || widget.config?.title
+                    
+                    if (widget.type === 'ui:chart' || widget.type === 'chart' || widget.type === 'line_chart') {
+                        return (
+                            <div key={widget.id} className="widget-card" style={{ background: '#1a1a2e', borderRadius: 12, padding: 20, border: '1px solid #2a2a4a', height: 300 }}>
+                                <LineChartWidget
+                                    label={label || 'Chart'}
+                                    data={history[topic] || []}
+                                    dataKey="value"
+                                    color={widget.config?.color || '#4a90d9'}
+                                />
+                            </div>
+                        )
+                    }
+                    
+                    if (widget.type === 'ui:gauge' || widget.type === 'gauge') {
+                        return (
+                            <div key={widget.id} className="widget-card" style={{ background: '#1a1a2e', borderRadius: 12, padding: 20, border: '1px solid #2a2a4a', height: 300 }}>
+                                <GaugeWidget
+                                    label={label || 'Gauge'}
+                                    value={messages[topic]?.payload || 0}
+                                    unit={widget.config?.unit || ''}
+                                    min={widget.config?.min || 0}
+                                    max={widget.config?.max || 100}
+                                    color={widget.config?.color || '#27ae60'}
+                                />
+                            </div>
+                        )
+                    }
+                    
+                    if (widget.type === 'ui:led' || widget.type === 'led') {
+                        const isOn = !!messages[topic]?.payload
+                        const colorOn = widget.config?.color || widget.config?.colorOn || '#e74c3c'
+                        const colorOff = widget.config?.colorOff || '#333'
+                        return (
+                            <div key={widget.id} className="widget-card" style={{ background: '#1a1a2e', borderRadius: 12, padding: 20, border: '1px solid #2a2a4a', height: 150, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                                <div style={{ fontSize: 14, color: '#888', marginBottom: 10 }}>{label || 'LED'}</div>
+                                <div style={{
+                                    width: 40,
+                                    height: 40,
+                                    borderRadius: '50%',
+                                    background: isOn ? colorOn : colorOff,
+                                    boxShadow: isOn ? `0 0 20px ${colorOn}` : 'none',
+                                    transition: 'all 0.3s'
+                                }} />
+                            </div>
+                        )
+                    }
+                    
+                    return null
+                })}
 
-                {/* Current Temperature Gauge */}
-                <div className="widget-card" style={{ background: '#1a1a2e', borderRadius: 12, padding: 20, border: '1px solid #2a2a4a', height: 300 }}>
-                    <GaugeWidget
-                        label="Current Temperature"
-                        value={messages['sensors/temperature']?.payload || 0}
-                        unit="°C"
-                        min={15}
-                        max={35}
-                        color="#4a90d9"
-                    />
-                </div>
+                {/* Default widgets (shown when no project widgets configured) */}
+                {widgets.length === 0 && (
+                    <>
+                        {/* Temperature Chart */}
+                        <div className="widget-card" style={{ background: '#1a1a2e', borderRadius: 12, padding: 20, border: '1px solid #2a2a4a', height: 300 }}>
+                            <LineChartWidget
+                                label="Temperature History (Sine)"
+                                data={history['sensors/temperature'] || []}
+                                dataKey="value"
+                                color="#4a90d9"
+                            />
+                        </div>
 
-                {/* Live Sensor Chart */}
-                <div className="widget-card" style={{ background: '#1a1a2e', borderRadius: 12, padding: 20, border: '1px solid #2a2a4a', height: 300 }}>
-                    <LineChartWidget
-                        label={`Live Data: ${mainTopic}${history[`${mainTopic}/processed`] ? ' (Processed)' : ''}`}
-                        data={history[`${mainTopic}/processed`] || history[mainTopic] || []}
-                        dataKey="value"
-                        color="#2ecc71"
-                    />
-                </div>
+                        {/* Current Temperature Gauge */}
+                        <div className="widget-card" style={{ background: '#1a1a2e', borderRadius: 12, padding: 20, border: '1px solid #2a2a4a', height: 300 }}>
+                            <GaugeWidget
+                                label="Current Temperature"
+                                value={messages['sensors/temperature']?.payload || 0}
+                                unit="°C"
+                                min={15}
+                                max={35}
+                                color="#4a90d9"
+                            />
+                        </div>
 
-                {/* Output Data Gauge */}
-                <div className="widget-card" style={{ background: '#1a1a2e', borderRadius: 12, padding: 20, border: '1px solid #2a2a4a', height: 300 }}>
-                    <GaugeWidget
-                        label={`Current Value${messages[`${mainTopic}/processed`] ? ' (Processed)' : ''}`}
-                        value={messages[`${mainTopic}/processed`]?.payload || messages[mainTopic]?.payload || 0}
-                        unit="Units"
-                        min={0}
-                        max={1000} // Increase max if data is scaled x10
-                        color="#27ae60"
-                    />
-                </div>
+                        {/* Live Sensor Chart */}
+                        <div className="widget-card" style={{ background: '#1a1a2e', borderRadius: 12, padding: 20, border: '1px solid #2a2a4a', height: 300 }}>
+                            <LineChartWidget
+                                label={`Live Data: ${mainTopic}${history[`${mainTopic}/processed`] ? ' (Processed)' : ''}`}
+                                data={history[`${mainTopic}/processed`] || history[mainTopic] || []}
+                                dataKey="value"
+                                color="#2ecc71"
+                            />
+                        </div>
+
+                        {/* Output Data Gauge */}
+                        <div className="widget-card" style={{ background: '#1a1a2e', borderRadius: 12, padding: 20, border: '1px solid #2a2a4a', height: 300 }}>
+                            <GaugeWidget
+                                label={`Current Value${messages[`${mainTopic}/processed`] ? ' (Processed)' : ''}`}
+                                value={messages[`${mainTopic}/processed`]?.payload || messages[mainTopic]?.payload || 0}
+                                unit="Units"
+                                min={0}
+                                max={1000}
+                                color="#27ae60"
+                            />
+                        </div>
+                    </>
+                )}
 
             </div>
         </div>

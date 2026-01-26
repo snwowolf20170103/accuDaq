@@ -1,12 +1,20 @@
 import { memo } from 'react'
 import { Handle, Position, NodeProps } from '@xyflow/react'
 import { DAQNodeData } from '../types'
+import DebugOverlay from './DebugOverlay'
 
-const DAQNode = ({ data, selected }: NodeProps) => {
-    const nodeData = data as DAQNodeData
+const DAQNode = ({ id, data, selected }: NodeProps) => {
+    const nodeData = data as unknown as DAQNodeData
+    
+    // Debug props from nodeData (passed from App.tsx)
+    const debugMode = nodeData.debugMode || false
+    const isExecuting = nodeData.isExecuting || false
+    const hasBreakpoint = nodeData.hasBreakpoint || false
+    const portValues = nodeData.portValues || {}
+    const onToggleBreakpoint = nodeData.onToggleBreakpoint
 
     return (
-        <div className={`daq-node ${nodeData.category} ${selected ? 'selected' : ''}`}>
+        <div className={`daq-node ${nodeData.category} ${selected ? 'selected' : ''} ${isExecuting ? 'executing' : ''} ${hasBreakpoint ? 'has-breakpoint' : ''}`}>
             <div className="daq-node-header">
                 <div className="daq-node-icon">{nodeData.icon}</div>
                 <div>
@@ -58,6 +66,17 @@ const DAQNode = ({ data, selected }: NodeProps) => {
                     </div>
                 </div>
             </div>
+
+            {/* Debug Overlay - only show when debug mode is active */}
+            {debugMode && (
+                <DebugOverlay
+                    nodeId={id}
+                    isExecuting={isExecuting}
+                    portValues={portValues}
+                    hasBreakpoint={hasBreakpoint}
+                    onToggleBreakpoint={onToggleBreakpoint || (() => {})}
+                />
+            )}
         </div>
     )
 }

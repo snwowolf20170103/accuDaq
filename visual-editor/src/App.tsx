@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useMemo, useRef, useEffect } from 'react'
 import {
     ReactFlow,
     Background,
@@ -18,7 +18,9 @@ import ComponentLibrary from './components/ComponentLibrary'
 import PropertyPanel from './components/PropertyPanel'
 import Toolbar from './components/Toolbar'
 import DAQNode from './components/DAQNode'
-import { ComponentDefinition, DAQNodeData } from './types'
+import NewProjectDialog from './components/NewProjectDialog'
+import CodeView from './components/CodeView'
+import { ComponentDefinition, DAQNodeData, DAQProject, DAQWidget, EditorMode } from './types'
 import { v4 as uuidv4 } from 'uuid'
 import componentLibrary from './data/componentLibrary'
 
@@ -26,9 +28,40 @@ const nodeTypes = {
     daqNode: DAQNode,
 }
 
-import Dashboard from './components/Dashboard'
+const defaultEdgeOptions = {
+    type: 'smoothstep',
+    animated: false,
+};
+
+const miniMapNodeColor = (node: any) => {
+    const category = (node.data as unknown as DAQNodeData).category
+    switch (category) {
+        case 'device': return '#4a90d9'
+        case 'logic': return '#9b59b6'
+        case 'storage': return '#27ae60'
+        case 'comm': return '#e67e22'
+        default: return '#888'
+    }
+}
+
+import DashboardDesigner from './components/DashboardDesigner'
+import DevicePanel from './components/DevicePanel'
+import AIChat from './components/AIChat'
 import DaqEngine from './components/DaqEngine'
-import { useEffect } from 'react'
+import FlowDesigner from './components/FlowDesigner'
+import CICDPanel from './components/CICDPanel'
+import { SettingsPanel } from './components/SettingsPanel'
+// New imports for unintegrated components
+import IndustryWidgets from './components/IndustryWidgets'
+import BlocklyEditor from './components/BlocklyEditor'
+import CommLogViewer from './components/CommLogViewer'
+import DataReplayPanel from './components/DataReplayPanel'
+import HistoryDataViewer from './components/HistoryDataViewer'
+import TaskSchedulerPanel from './components/TaskSchedulerPanel'
+// Debug and AI components
+import DataFlowDebugger from './components/DataFlowDebugger'
+import AIAssistantPanel from './components/AIAssistantPanel'
+import GitPanel from './components/GitPanel'
 
 // Toast notification component
 interface ToastProps {
@@ -76,9 +109,29 @@ function App() {
     const [nodes, setNodes, onNodesChange] = useNodesState<any>([])
     const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([])
     const [selectedNode, setSelectedNode] = useState<string | null>(null)
-    const [view, setView] = useState<'editor' | 'dashboard'>('editor')
+    const [view, setView] = useState<'editor' | 'dashboard' | 'flowdesigner' | 'industry' | 'blockly' | 'commlog' | 'replay' | 'history' | 'scheduler'>('editor')
+    const [editorMode, setEditorMode] = useState<EditorMode>('visual')
     const [isRunning, setIsRunning] = useState(false)
     const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null)
+    const [showNewProjectDialog, setShowNewProjectDialog] = useState(false)
+    const [projectName, setProjectName] = useState<string>('Untitled Project')
+    const [dashboardWidgets, setDashboardWidgets] = useState<DAQWidget[]>([])
+    const [dashboardLayout, setDashboardLayout] = useState<any[]>([])
+    const [dashboardEditMode, setDashboardEditMode] = useState(true)
+    const [showDevicePanel, setShowDevicePanel] = useState(false)
+    const [showAIChat, setShowAIChat] = useState(false)
+    const [showCICDPanel, setShowCICDPanel] = useState(false)
+    const [showSettingsPanel, setShowSettingsPanel] = useState(false)
+    const [debugMode, setDebugMode] = useState(false)
+    const [executingNodeId, setExecutingNodeId] = useState<string | null>(null)
+    const [breakpoints, setBreakpoints] = useState<string[]>([])
+    // Debug and AI panel states
+    const [showDebugger, setShowDebugger] = useState(false)
+    const [showAIAssistant, setShowAIAssistant] = useState(false)
+    const [showGitPanel, setShowGitPanel] = useState(false)
+    const { screenToFlowPosition, getZoom, getNode } = useReactFlow()
+
+
 
     const showToast = useCallback((message: string, type: 'success' | 'error' | 'info' = 'info') => {
         setToast({ message, type })
@@ -86,10 +139,21 @@ function App() {
 
     // Load from localStorage on initialization
     useEffect(() => {
+        const savedProject = localStorage.getItem('daq-project')
+        if (savedProject) {
+            try {
+                const project = JSON.parse(savedProject)
+                setProjectName(project.meta?.name || 'Untitled Project')
+                setDashboardWidgets(project.ui?.widgets || [])
+                setDashboardLayout(project.ui?.layout || [])
+            } catch (e) {
+                console.warn('Failed to parse saved project meta')
+            }
+        }
+
         const savedNodes = localStorage.getItem('daq-nodes')
         const savedEdges = localStorage.getItem('daq-edges')
         if (savedNodes) {
-            // Ensure all nodes are unselected and draggable when loading
             const parsedNodes = JSON.parse(savedNodes).map((node: any) => ({
                 ...node,
                 selected: false,
@@ -101,14 +165,290 @@ function App() {
         if (savedEdges) setEdges(JSON.parse(savedEdges))
     }, [])
 
-    // Persist to localStorage whenever nodes/edges change
+    // Auto-save with debounce - saves complete project state
     useEffect(() => {
-        localStorage.setItem('daq-nodes', JSON.stringify(nodes))
-    }, [nodes])
+        const saveTimer = setTimeout(() => {
+            // Save nodes and edges
+            localStorage.setItem('daq-nodes', JSON.stringify(nodes))
+            localStorage.setItem('daq-edges', JSON.stringify(edges))
 
-    useEffect(() => {
-        localStorage.setItem('daq-edges', JSON.stringify(edges))
-    }, [edges])
+            // Save complete project
+            const project: DAQProject = {
+                meta: {
+                    name: projectName,
+                    version: '1.0.0',
+                    schemaVersion: '2.0.0',
+                    modifiedAt: new Date().toISOString()
+                },
+                settings: {
+                    debugMode,
+                    autoSave: true
+                },
+                devices: [],
+                logic: {
+                    nodes: nodes.map(n => ({
+                        id: n.id,
+                        type: `daq:${(n.data as any).componentType}`,
+                        label: (n.data as any).label,
+                        position: n.position,
+                        properties: (n.data as any).properties || {}
+                    })),
+                    wires: edges.map(e => ({
+                        id: e.id,
+                        source: { nodeId: e.source, portId: e.sourceHandle || '' },
+                        target: { nodeId: e.target, portId: e.targetHandle || '' }
+                    }))
+                },
+                ui: {
+                    widgets: dashboardWidgets,
+                    layout: dashboardLayout as any
+                }
+            }
+            localStorage.setItem('daq-project', JSON.stringify(project))
+
+            console.log('Project auto-saved at', new Date().toLocaleTimeString())
+        }, 2000) // 2 second debounce
+
+        return () => clearTimeout(saveTimer)
+    }, [nodes, edges, projectName, debugMode, dashboardWidgets, dashboardLayout])
+
+    // State for project management
+    const [showProjectList, setShowProjectList] = useState(false)
+    const [recentProjects, setRecentProjects] = useState<{ fileName: string; name: string; modifiedAt: string }[]>([])
+
+    // Save project to file
+    const saveProjectToFile = useCallback(async () => {
+        const project: DAQProject = {
+            meta: {
+                name: projectName,
+                version: '1.0.0',
+                schemaVersion: '2.0.0',
+                modifiedAt: new Date().toISOString()
+            },
+            settings: {
+                debugMode,
+                autoSave: true
+            },
+            devices: [],
+            logic: {
+                nodes: nodes.map(n => ({
+                    id: n.id,
+                    type: `daq:${(n.data as any).componentType}`,
+                    label: (n.data as any).label,
+                    position: n.position,
+                    properties: (n.data as any).properties || {}
+                })),
+                wires: edges.map(e => ({
+                    id: e.id,
+                    source: { nodeId: e.source, portId: e.sourceHandle || '' },
+                    target: { nodeId: e.target, portId: e.targetHandle || '' }
+                }))
+            },
+            ui: {
+                widgets: dashboardWidgets,
+                layout: dashboardLayout as any
+            }
+        }
+
+        try {
+            const response = await fetch('/api/project/save', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name: projectName, project })
+            })
+            const result = await response.json()
+            if (response.ok) {
+                showToast(`项目已保存: ${result.fileName}`, 'success')
+            } else {
+                showToast(`保存失败: ${result.error}`, 'error')
+            }
+        } catch (err: any) {
+            showToast(`保存失败: ${err.message}`, 'error')
+        }
+    }, [nodes, edges, projectName, debugMode, dashboardWidgets, dashboardLayout, showToast])
+
+    // Load project from file
+    const loadProjectFromFile = useCallback(async (fileName: string) => {
+        try {
+            const response = await fetch(`/api/project/load?file=${encodeURIComponent(fileName)}`)
+            const result = await response.json()
+            if (response.ok && result.project) {
+                const project = result.project
+                setProjectName(project.name || project.meta?.name || 'Untitled')
+                setDebugMode(project.settings?.debugMode || false)
+                setDashboardWidgets(project.ui?.widgets || [])
+                setDashboardLayout(project.ui?.layout || [])
+
+                // Restore nodes
+                if (project.logic?.nodes) {
+                    const restoredNodes = project.logic.nodes.map((pNode: any) => {
+                        const typeName = pNode.type.startsWith('daq:') ? pNode.type.split(':')[1] : pNode.type
+                        const component = componentLibrary.find(c => c.type === typeName)
+                        return {
+                            id: pNode.id,
+                            type: 'daqNode',
+                            position: pNode.position,
+                            data: {
+                                label: pNode.label || component?.name || typeName,
+                                componentType: typeName,
+                                icon: component?.icon || '⚙️',
+                                inputs: component?.inputs || [],
+                                outputs: component?.outputs || [],
+                                properties: { ...(component?.defaultProperties || {}), ...pNode.properties }
+                            }
+                        }
+                    })
+                    setNodes(restoredNodes)
+                }
+
+                // Restore edges
+                if (project.logic?.wires) {
+                    const restoredEdges = project.logic.wires.map((wire: any) => ({
+                        id: wire.id,
+                        source: wire.source.nodeId,
+                        target: wire.target.nodeId,
+                        sourceHandle: wire.source.portId,
+                        targetHandle: wire.target.portId
+                    }))
+                    setEdges(restoredEdges)
+                }
+
+                setShowProjectList(false)
+                showToast(`项目已加载: ${project.name || fileName}`, 'success')
+            } else {
+                showToast(`加载失败: ${result.error}`, 'error')
+            }
+        } catch (err: any) {
+            showToast(`加载失败: ${err.message}`, 'error')
+        }
+    }, [setNodes, setEdges, showToast])
+
+    // Fetch recent projects list
+    const fetchRecentProjects = useCallback(async () => {
+        try {
+            const response = await fetch('/api/projects')
+            const result = await response.json()
+            if (response.ok) {
+                setRecentProjects(result.projects || [])
+            }
+        } catch (err) {
+            console.error('Failed to fetch projects:', err)
+        }
+    }, [])
+
+    // Delete project
+    const deleteProject = useCallback(async (fileName: string) => {
+        if (!confirm(`确定要删除项目 "${fileName}" 吗？此操作不可恢复。`)) return
+
+        try {
+            const response = await fetch(`/api/project/delete?file=${encodeURIComponent(fileName)}`, {
+                method: 'DELETE'
+            })
+            if (response.ok) {
+                showToast('项目已删除', 'success')
+                fetchRecentProjects()
+            } else {
+                const result = await response.json()
+                showToast(`删除失败: ${result.error}`, 'error')
+            }
+        } catch (err: any) {
+            showToast(`删除失败: ${err.message}`, 'error')
+        }
+    }, [showToast, fetchRecentProjects])
+
+    // Rename project state and function
+    const [renameDialog, setRenameDialog] = useState<{ show: boolean; fileName: string; currentName: string }>({ show: false, fileName: '', currentName: '' })
+    const [newProjectName, setNewProjectName] = useState('')
+
+    const renameProject = useCallback(async () => {
+        if (!newProjectName.trim()) {
+            showToast('请输入新名称', 'error')
+            return
+        }
+
+        try {
+            const response = await fetch('/api/project/rename', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ oldFile: renameDialog.fileName, newName: newProjectName.trim() })
+            })
+            if (response.ok) {
+                showToast('项目已重命名', 'success')
+                setRenameDialog({ show: false, fileName: '', currentName: '' })
+                setNewProjectName('')
+                fetchRecentProjects()
+            } else {
+                const result = await response.json()
+                showToast(`重命名失败: ${result.error}`, 'error')
+            }
+        } catch (err: any) {
+            showToast(`重命名失败: ${err.message}`, 'error')
+        }
+    }, [newProjectName, renameDialog.fileName, showToast, fetchRecentProjects])
+
+    // Duplicate project
+    const duplicateProject = useCallback(async (sourceFile: string, sourceName: string) => {
+        const newName = prompt('请输入新项目名称:', `${sourceName}_copy`)
+        if (!newName) return
+
+        try {
+            const response = await fetch('/api/project/duplicate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ sourceFile, newName: newName.trim() })
+            })
+            if (response.ok) {
+                showToast('项目已复制', 'success')
+                fetchRecentProjects()
+            } else {
+                const result = await response.json()
+                showToast(`复制失败: ${result.error}`, 'error')
+            }
+        } catch (err: any) {
+            showToast(`复制失败: ${err.message}`, 'error')
+        }
+    }, [showToast, fetchRecentProjects])
+
+    // Download saved project from server
+    const downloadSavedProject = useCallback((fileName: string) => {
+        const link = document.createElement('a')
+        link.href = `/api/project/export?file=${encodeURIComponent(fileName)}`
+        link.download = fileName
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+        showToast('项目已导出', 'success')
+    }, [showToast])
+
+    // Import project (upload)
+    const importProjectRef = useRef<HTMLInputElement>(null)
+    const handleImportProject = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0]
+        if (!file) return
+
+        try {
+            const content = await file.text()
+            const response = await fetch('/api/project/import', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: content
+            })
+            if (response.ok) {
+                showToast('项目已导入', 'success')
+                fetchRecentProjects()
+            } else {
+                const result = await response.json()
+                showToast(`导入失败: ${result.error}`, 'error')
+            }
+        } catch (err: any) {
+            showToast(`导入失败: ${err.message}`, 'error')
+        }
+
+        // Reset input
+        if (importProjectRef.current) {
+            importProjectRef.current.value = ''
+        }
+    }, [showToast, fetchRecentProjects])
 
     const toggleRun = useCallback(async () => {
         if (!isRunning) {
@@ -157,21 +497,21 @@ function App() {
         if (!source || !target) return false;
         if (!sourceHandle || !targetHandle) return false;
 
-        const sourceNode = nodes.find(n => n.id === source);
-        const targetNode = nodes.find(n => n.id === target);
+        const sourceNode = getNode(source);
+        const targetNode = getNode(target);
 
         if (!sourceNode || !targetNode) return false;
 
         // Find port definitions
-        const sourcePort = sourceNode.data.outputs?.find(
+        const sourcePort = (sourceNode.data as unknown as DAQNodeData).outputs?.find(
             (p: any) => p.id === sourceHandle
         );
-        const targetPort = targetNode.data.inputs?.find(
+        const targetPort = (targetNode.data as unknown as DAQNodeData).inputs?.find(
             (p: any) => p.id === targetHandle
         );
 
         if (!sourcePort || !targetPort) {
-            console.warn('Port not found:', sourceHandle, targetHandle);
+            // console.warn('Port not found:', sourceHandle, targetHandle);
             return false;
         }
 
@@ -190,9 +530,9 @@ function App() {
         // 'number' can connect to 'number' or 'any'
         // etc.
 
-        console.warn(`Type mismatch: ${sourceType} -> ${targetType}`);
+        // console.warn(`Type mismatch: ${sourceType} -> ${targetType}`);
         return false;
-    }, [nodes]);
+    }, [getNode]);
 
     const onConnect = useCallback(
         (params: Connection) => {
@@ -227,23 +567,45 @@ function App() {
         (event: React.DragEvent) => {
             event.preventDefault()
 
-            const componentData = event.dataTransfer.getData('application/daq-component')
-            if (!componentData) return
+            const dataString = event.dataTransfer.getData('application/daq-component')
+            if (!dataString) return
 
-            const component: ComponentDefinition = JSON.parse(componentData)
+            let component: ComponentDefinition
+            let offset = { x: 0, y: 0 }
 
-            const reactFlowBounds = (event.target as HTMLElement).closest('.react-flow')?.getBoundingClientRect()
-            if (!reactFlowBounds) return
-
-            const position = {
-                x: event.clientX - reactFlowBounds.left - 100,
-                y: event.clientY - reactFlowBounds.top - 50,
+            try {
+                const parsedData = JSON.parse(dataString)
+                if (parsedData.component && parsedData.offset) {
+                    component = parsedData.component
+                    offset = parsedData.offset
+                } else {
+                    // Fallback for old Format or direct component data
+                    component = parsedData
+                    // Default offset if not provided (center of a theoretical 200x100 node)
+                    offset = { x: 100, y: 50 }
+                }
+            } catch (err) {
+                console.error("Failed to parse drag data", err)
+                return
             }
+
+            const position = screenToFlowPosition({
+                x: event.clientX,
+                y: event.clientY,
+            })
+
+            // Adjust position based on offset and current zoom level
+            const zoom = getZoom()
+            const correctedX = position.x - (offset.x / zoom)
+            const correctedY = position.y - (offset.y / zoom)
 
             const newNode = {
                 id: uuidv4(),
                 type: 'daqNode',
-                position,
+                position: {
+                    x: correctedX,
+                    y: correctedY,
+                },
                 draggable: true,
                 selectable: true,
                 selected: false,
@@ -260,7 +622,7 @@ function App() {
 
             setNodes((nds) => [...nds, newNode])
         },
-        [setNodes]
+        [setNodes, screenToFlowPosition, getZoom]
     )
 
     const updateNodeProperty = useCallback((nodeId: string, key: string, value: any) => {
@@ -294,9 +656,9 @@ function App() {
     const compileProject = useCallback(async () => {
         const project = {
             meta: {
-                name: "MQTT Realtime Test",
+                name: projectName,
                 version: "1.0.0",
-                schemaVersion: "0.1.0"
+                schemaVersion: "2.0.0"
             },
             devices: [],
             logic: {
@@ -313,7 +675,7 @@ function App() {
                     target: { nodeId: edge.target, portId: edge.targetHandle || 'input' },
                 })),
             },
-            ui: { widgets: [] }
+            ui: { widgets: dashboardWidgets }
         }
 
         try {
@@ -332,14 +694,14 @@ function App() {
         } catch (err) {
             showToast("Network error: " + err, "error")
         }
-    }, [nodes, edges])
+    }, [nodes, edges, dashboardWidgets, projectName])
 
     const exportProject = useCallback(async () => {
         const project = {
             meta: {
-                name: "New Project",
+                name: projectName,
                 version: "1.0.0",
-                schemaVersion: "0.1.0"
+                schemaVersion: "2.0.0"
             },
             devices: [],
             logic: {
@@ -356,7 +718,7 @@ function App() {
                     target: { nodeId: edge.target, portId: edge.targetHandle || 'input' },
                 })),
             },
-            ui: { widgets: [] }
+            ui: { widgets: dashboardWidgets }
         }
 
         const jsonString = JSON.stringify(project, null, 2);
@@ -392,7 +754,7 @@ function App() {
         a.download = 'project.daq'
         a.click()
         URL.revokeObjectURL(url)
-    }, [nodes, edges])
+    }, [nodes, edges, dashboardWidgets, projectName])
 
     const importProject = useCallback(async () => {
         try {
@@ -430,6 +792,9 @@ function App() {
             if (!project.logic || !Array.isArray(project.logic.nodes)) {
                 throw new Error('Invalid project file format');
             }
+
+            setProjectName(project.meta?.name || 'Untitled Project')
+            setDashboardWidgets(project.ui?.widgets || [])
 
             // Map project nodes to ReactFlow nodes
             const newNodes = project.logic.nodes.map((pNode: any) => {
@@ -489,84 +854,153 @@ function App() {
         return csvNode?.data?.properties?.file_path || './data/output.csv';
     }
 
-    // Editor View Component
-    const EditorView = () => (
-        <div className="app-container">
-            <ComponentLibrary />
+    // Handle new project creation from template
+    const handleCreateProject = useCallback((project: DAQProject) => {
+        setProjectName(project.meta.name)
+        setDashboardWidgets(project.ui?.widgets || [])
 
-            <div className="canvas-container">
-                <Toolbar
-                    onExport={exportProject}
-                    onImport={importProject}
-                    onCompile={compileProject}
-                    onDelete={deleteSelectedNode}
-                    hasSelection={!!selectedNode}
-                    isRunning={isRunning}
-                    onToggleRun={toggleRun}
-                    csvPath={getCsvPath()}
-                />
+        // Convert project nodes to ReactFlow nodes
+        const newNodes = project.logic.nodes.map((pNode) => {
+            const typeName = pNode.type.startsWith('daq:') ? pNode.type.split(':')[1] : pNode.type
+            const component = componentLibrary.find(c => c.type === typeName)
 
-                <div className="canvas-wrapper">
-                    <ReactFlow
-                        nodes={nodes}
-                        edges={edges}
-                        onNodesChange={onNodesChange}
-                        onEdgesChange={onEdgesChange}
-                        onConnect={onConnect}
-                        isValidConnection={isValidConnection}
-                        onNodeClick={onNodeClick}
-                        onPaneClick={onPaneClick}
-                        onDragOver={onDragOver}
-                        onDrop={onDrop}
-                        nodeTypes={nodeTypes}
-                        fitView
-                        snapToGrid={true}
-                        snapGrid={[20, 20]}
-                        nodesDraggable={true}
-                        nodesConnectable={true}
-                        elementsSelectable={true}
-                        selectNodesOnDrag={true}
-                        panOnDrag={[1, 2]}
-                        minZoom={0.2}
-                        maxZoom={4}
-                        onlyRenderVisibleElements={false}
-                        defaultEdgeOptions={{
-                            type: 'smoothstep',
-                            animated: false,
-                        }}
-                    >
-                        <Background color="#2a2a4a" gap={20} />
-                        <Controls />
-                        <MiniMap
-                            nodeColor={(node) => {
-                                const category = (node.data as DAQNodeData).category
-                                switch (category) {
-                                    case 'device': return '#4a90d9'
-                                    case 'logic': return '#9b59b6'
-                                    case 'storage': return '#27ae60'
-                                    case 'comm': return '#e67e22'
-                                    default: return '#888'
-                                }
-                            }}
-                            zoomable={true}
-                            pannable={true}
-                            nodeStrokeWidth={3}
-                        />
-                    </ReactFlow>
-                </div>
-            </div>
+            return {
+                id: pNode.id,
+                type: 'daqNode',
+                position: pNode.position,
+                draggable: true,
+                selectable: true,
+                selected: false,
+                data: {
+                    label: pNode.label || component?.name || typeName,
+                    componentType: typeName,
+                    category: component?.category || 'logic',
+                    icon: component?.icon || '❓',
+                    inputs: component?.inputs || [],
+                    outputs: component?.outputs || [],
+                    properties: { ...component?.defaultProperties, ...pNode.properties },
+                } as DAQNodeData,
+            }
+        })
 
-            <PropertyPanel
-                node={selectedNodeData}
-                onPropertyChange={updateNodeProperty}
-            />
-        </div>
-    )
+        // Convert project wires to ReactFlow edges
+        const newEdges = project.logic.wires.map((wire) => ({
+            id: wire.id,
+            source: wire.source.nodeId,
+            target: wire.target.nodeId,
+            sourceHandle: wire.source.portId,
+            targetHandle: wire.target.portId,
+            type: 'smoothstep',
+            animated: true,
+        }))
+
+        setNodes(newNodes)
+        setEdges(newEdges)
+        setSelectedNode(null)
+
+        // Save project meta to localStorage
+        localStorage.setItem('daq-project', JSON.stringify(project))
+
+        showToast(`Project "${project.meta.name}" created!`, 'success')
+    }, [setNodes, setEdges, showToast])
+
+    // Toggle debug mode with backend sync
+    const toggleDebugMode = useCallback(async () => {
+        const newMode = !debugMode
+        setDebugMode(newMode)
+
+        try {
+            if (newMode) {
+                await fetch('/api/debug/enable', { method: 'POST' })
+            } else {
+                await fetch('/api/debug/disable', { method: 'POST' })
+                setExecutingNodeId(null)
+            }
+        } catch (err) {
+            console.warn('Failed to sync debug mode with backend:', err)
+        }
+    }, [debugMode])
+
+    // Toggle breakpoint on a node with backend sync
+    const toggleBreakpoint = useCallback(async (nodeId: string) => {
+        setBreakpoints(prev => {
+            if (prev.includes(nodeId)) {
+                return prev.filter(id => id !== nodeId)
+            }
+            return [...prev, nodeId]
+        })
+
+        // Sync with backend
+        try {
+            await fetch('/api/debug/breakpoint', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ nodeId })
+            })
+        } catch (err) {
+            console.warn('Failed to sync breakpoint with backend:', err)
+        }
+    }, [])
+
+    // Poll debug state from backend when running in debug mode
+    useEffect(() => {
+        if (!debugMode || !isRunning) return
+
+        const pollInterval = setInterval(async () => {
+            try {
+                const response = await fetch('/api/debug/state')
+                if (response.ok) {
+                    const state = await response.json()
+                    if (state.executing_node) {
+                        setExecutingNodeId(state.executing_node)
+                    }
+                }
+            } catch (err) {
+                // Ignore polling errors
+            }
+        }, 500)
+
+        return () => clearInterval(pollInterval)
+    }, [debugMode, isRunning])
+
+    // Continue from breakpoint
+    const continueFromBreakpoint = useCallback(async () => {
+        try {
+            await fetch('/api/debug/continue', { method: 'POST' })
+            setExecutingNodeId(null)
+        } catch (err) {
+            console.warn('Failed to continue from breakpoint:', err)
+        }
+    }, [])
+
+    // Create nodes with debug properties injected
+    const nodesWithDebug = useMemo(() => {
+        if (!debugMode) return nodes
+
+        return nodes.map(node => ({
+            ...node,
+            data: {
+                ...node.data,
+                debugMode: true,
+                isExecuting: executingNodeId === node.id,
+                hasBreakpoint: breakpoints.includes(node.id),
+                portValues: {}, // Would be populated from backend in real implementation
+                onToggleBreakpoint: () => toggleBreakpoint(node.id)
+            }
+        }))
+    }, [nodes, debugMode, executingNodeId, breakpoints, toggleBreakpoint])
 
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', height: '100vh' }} className={debugMode ? 'debug-mode' : ''}>
             {/* Toast Notification */}
             {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
+
+            {/* New Project Dialog */}
+            <NewProjectDialog
+                isOpen={showNewProjectDialog}
+                onClose={() => setShowNewProjectDialog(false)}
+                onCreateProject={handleCreateProject}
+            />
 
             {/* Top Navigation Bar */}
             <div style={{
@@ -578,17 +1012,66 @@ function App() {
                 padding: '0 20px',
                 justifyContent: 'space-between'
             }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
                     <span style={{ fontSize: 20 }}>🚀</span>
                     <span style={{ fontWeight: 700, color: '#fff' }}>DAQ IDE</span>
+                    <span style={{ color: '#888', fontSize: 13 }}>|</span>
+                    <span style={{ color: '#4a90d9', fontSize: 14, fontWeight: 500 }}>{projectName}</span>
+                    <button
+                        onClick={() => setShowNewProjectDialog(true)}
+                        style={{
+                            background: '#2a2a4a',
+                            border: 'none',
+                            color: '#fff',
+                            padding: '4px 12px',
+                            borderRadius: 4,
+                            cursor: 'pointer',
+                            fontSize: 12,
+                            fontWeight: 500,
+                        }}
+                    >
+                        + New
+                    </button>
+                    <button
+                        onClick={saveProjectToFile}
+                        title="保存项目到文件"
+                        style={{
+                            background: '#2a2a4a',
+                            border: 'none',
+                            color: '#fff',
+                            padding: '4px 12px',
+                            borderRadius: 4,
+                            cursor: 'pointer',
+                            fontSize: 12,
+                            fontWeight: 500,
+                        }}
+                    >
+                        💾 Save
+                    </button>
+                    <button
+                        onClick={() => { fetchRecentProjects(); setShowProjectList(true) }}
+                        title="打开已保存的项目"
+                        style={{
+                            background: '#2a2a4a',
+                            border: 'none',
+                            color: '#fff',
+                            padding: '4px 12px',
+                            borderRadius: 4,
+                            cursor: 'pointer',
+                            fontSize: 12,
+                            fontWeight: 500,
+                        }}
+                    >
+                        📂 Open
+                    </button>
                 </div>
 
                 <div style={{ display: 'flex', background: '#0f0f1a', borderRadius: 6, padding: 4 }}>
                     <button
-                        onClick={() => setView('editor')}
+                        onClick={() => { setView('editor'); setEditorMode('visual') }}
                         style={{
-                            background: view === 'editor' ? '#2a2a4a' : 'transparent',
-                            color: view === 'editor' ? '#fff' : '#888',
+                            background: view === 'editor' && editorMode === 'visual' ? '#2a2a4a' : 'transparent',
+                            color: view === 'editor' && editorMode === 'visual' ? '#fff' : '#888',
                             border: 'none',
                             padding: '6px 16px',
                             borderRadius: 4,
@@ -597,7 +1080,22 @@ function App() {
                             transition: 'all 0.2s'
                         }}
                     >
-                        Editor
+                        📊 Visual
+                    </button>
+                    <button
+                        onClick={() => { setView('editor'); setEditorMode('code') }}
+                        style={{
+                            background: view === 'editor' && editorMode === 'code' ? '#2a2a4a' : 'transparent',
+                            color: view === 'editor' && editorMode === 'code' ? '#fff' : '#888',
+                            border: 'none',
+                            padding: '6px 16px',
+                            borderRadius: 4,
+                            cursor: 'pointer',
+                            fontWeight: 500,
+                            transition: 'all 0.2s'
+                        }}
+                    >
+                        💻 Code
                     </button>
                     <button
                         onClick={() => setView('dashboard')}
@@ -614,9 +1112,246 @@ function App() {
                     >
                         Dashboard
                     </button>
+                    <button
+                        onClick={() => setView('flowdesigner')}
+                        style={{
+                            background: view === 'flowdesigner' ? '#2a2a4a' : 'transparent',
+                            color: view === 'flowdesigner' ? '#fff' : '#888',
+                            border: 'none',
+                            padding: '6px 16px',
+                            borderRadius: 4,
+                            cursor: 'pointer',
+                            fontWeight: 500,
+                            transition: 'all 0.2s'
+                        }}
+                    >
+                        🔧 流程
+                    </button>
+                    <button
+                        onClick={() => setView('industry')}
+                        style={{
+                            background: view === 'industry' ? '#2a2a4a' : 'transparent',
+                            color: view === 'industry' ? '#fff' : '#888',
+                            border: 'none',
+                            padding: '6px 16px',
+                            borderRadius: 4,
+                            cursor: 'pointer',
+                            fontWeight: 500,
+                            transition: 'all 0.2s'
+                        }}
+                    >
+                        🏭 工业控件
+                    </button>
+                    <button
+                        onClick={() => setView('blockly')}
+                        style={{
+                            background: view === 'blockly' ? '#2a2a4a' : 'transparent',
+                            color: view === 'blockly' ? '#fff' : '#888',
+                            border: 'none',
+                            padding: '6px 16px',
+                            borderRadius: 4,
+                            cursor: 'pointer',
+                            fontWeight: 500,
+                            transition: 'all 0.2s'
+                        }}
+                    >
+                        🧩 Blockly
+                    </button>
+                    <button
+                        onClick={() => setView('commlog')}
+                        style={{
+                            background: view === 'commlog' ? '#2a2a4a' : 'transparent',
+                            color: view === 'commlog' ? '#fff' : '#888',
+                            border: 'none',
+                            padding: '6px 16px',
+                            borderRadius: 4,
+                            cursor: 'pointer',
+                            fontWeight: 500,
+                            transition: 'all 0.2s'
+                        }}
+                    >
+                        📡 通信日志
+                    </button>
+                    <button
+                        onClick={() => setView('replay')}
+                        style={{
+                            background: view === 'replay' ? '#2a2a4a' : 'transparent',
+                            color: view === 'replay' ? '#fff' : '#888',
+                            border: 'none',
+                            padding: '6px 16px',
+                            borderRadius: 4,
+                            cursor: 'pointer',
+                            fontWeight: 500,
+                            transition: 'all 0.2s'
+                        }}
+                    >
+                        ⏪ 数据回放
+                    </button>
+                    <button
+                        onClick={() => setView('history')}
+                        style={{
+                            background: view === 'history' ? '#2a2a4a' : 'transparent',
+                            color: view === 'history' ? '#fff' : '#888',
+                            border: 'none',
+                            padding: '6px 16px',
+                            borderRadius: 4,
+                            cursor: 'pointer',
+                            fontWeight: 500,
+                            transition: 'all 0.2s'
+                        }}
+                    >
+                        📊 历史数据
+                    </button>
+                    <button
+                        onClick={() => setView('scheduler')}
+                        style={{
+                            background: view === 'scheduler' ? '#2a2a4a' : 'transparent',
+                            color: view === 'scheduler' ? '#fff' : '#888',
+                            border: 'none',
+                            padding: '6px 16px',
+                            borderRadius: 4,
+                            cursor: 'pointer',
+                            fontWeight: 500,
+                            transition: 'all 0.2s'
+                        }}
+                    >
+                        ⏰ 任务调度
+                    </button>
+                    {view === 'dashboard' && (
+                        <button
+                            onClick={() => setDashboardEditMode(!dashboardEditMode)}
+                            style={{
+                                background: dashboardEditMode ? '#4fc3f7' : '#3c3c3c',
+                                color: '#fff',
+                                border: 'none',
+                                padding: '6px 12px',
+                                borderRadius: 4,
+                                cursor: 'pointer',
+                                fontWeight: 500,
+                                fontSize: 12,
+                                marginLeft: 8,
+                            }}
+                        >
+                            {dashboardEditMode ? '🔓 编辑中' : '🔒 已锁定'}
+                        </button>
+                    )}
                 </div>
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    {/* Debug Mode Toggle */}
+                    {view === 'editor' && editorMode === 'visual' && (
+                        <button
+                            onClick={() => setShowDevicePanel(!showDevicePanel)}
+                            style={{
+                                background: showDevicePanel ? '#9b59b6' : '#2a2a4a',
+                                color: '#fff',
+                                border: 'none',
+                                padding: '6px 12px',
+                                borderRadius: 4,
+                                cursor: 'pointer',
+                                fontWeight: 500,
+                                fontSize: 12,
+                            }}
+                        >
+                            📡 {showDevicePanel ? '组件库' : '设备'}
+                        </button>
+                    )}
+                    <button
+                        onClick={() => setShowAIAssistant(!showAIAssistant)}
+                        style={{
+                            background: showAIAssistant ? '#9b59b6' : '#2a2a4a',
+                            color: '#fff',
+                            border: 'none',
+                            padding: '6px 12px',
+                            borderRadius: 4,
+                            cursor: 'pointer',
+                            fontWeight: 500,
+                            fontSize: 12,
+                        }}
+                    >
+                        🤖 AI 助手
+                    </button>
+                    <button
+                        onClick={() => setShowDebugger(!showDebugger)}
+                        style={{
+                            background: showDebugger ? '#3498db' : '#2a2a4a',
+                            color: '#fff',
+                            border: 'none',
+                            padding: '6px 12px',
+                            borderRadius: 4,
+                            cursor: 'pointer',
+                            fontWeight: 500,
+                            fontSize: 12,
+                        }}
+                        title="数据流调试器"
+                    >
+                        🔍 调试器
+                    </button>
+                    <button
+                        onClick={toggleDebugMode}
+                        style={{
+                            background: debugMode ? '#e67e22' : '#2a2a4a',
+                            color: '#fff',
+                            border: 'none',
+                            padding: '6px 12px',
+                            borderRadius: 4,
+                            cursor: 'pointer',
+                            fontWeight: 500,
+                            fontSize: 12,
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 4,
+                        }}
+                        title={debugMode ? 'Disable Debug Mode' : 'Enable Debug Mode'}
+                    >
+                        🐛 {debugMode ? 'Debug ON' : 'Debug'}
+                    </button>
+                    <button
+                        onClick={() => setShowCICDPanel(true)}
+                        style={{
+                            background: '#2a2a4a',
+                            color: '#fff',
+                            border: 'none',
+                            padding: '6px 12px',
+                            borderRadius: 4,
+                            cursor: 'pointer',
+                            fontWeight: 500,
+                            fontSize: 12,
+                        }}
+                    >
+                        🔧 CI/CD
+                    </button>
+                    <button
+                        onClick={() => setShowGitPanel(!showGitPanel)}
+                        style={{
+                            background: showGitPanel ? '#f1502f' : '#2a2a4a',
+                            color: '#fff',
+                            border: 'none',
+                            padding: '6px 12px',
+                            borderRadius: 4,
+                            cursor: 'pointer',
+                            fontWeight: 500,
+                            fontSize: 12,
+                        }}
+                    >
+                        📦 Git
+                    </button>
+                    <button
+                        onClick={() => setShowSettingsPanel(true)}
+                        style={{
+                            background: '#2a2a4a',
+                            color: '#fff',
+                            border: 'none',
+                            padding: '6px 12px',
+                            borderRadius: 4,
+                            cursor: 'pointer',
+                            fontWeight: 500,
+                            fontSize: 12,
+                        }}
+                    >
+                        ⚙️ 设置
+                    </button>
+
                     <button
                         onClick={toggleRun}
                         style={{
@@ -635,14 +1370,505 @@ function App() {
                     >
                         {isRunning ? '🛑 STOP' : '▶️ RUN'}
                     </button>
-                    <div style={{ width: 10 }}></div>
                 </div>
             </div>
 
             <div style={{ flex: 1, overflow: 'hidden' }}>
-                {view === 'editor' ? <EditorView /> : <Dashboard nodes={nodes} isRunning={isRunning} />}
+                {view === 'editor' ? (
+                    editorMode === 'visual' ? (
+                        <div className="app-container">
+                            {showDevicePanel ? (
+                                <DevicePanel />
+                            ) : (
+                                <ComponentLibrary />
+                            )}
+
+                            <div className="canvas-container">
+                                <Toolbar
+                                    onExport={exportProject}
+                                    onImport={importProject}
+                                    onCompile={compileProject}
+                                    onDelete={deleteSelectedNode}
+                                    hasSelection={!!selectedNode}
+                                    isRunning={isRunning}
+                                    onToggleRun={toggleRun}
+                                    csvPath={getCsvPath()}
+                                />
+
+                                <div className="canvas-wrapper">
+                                    <ReactFlow
+                                        nodes={nodesWithDebug}
+                                        edges={edges}
+                                        onNodesChange={onNodesChange}
+                                        onEdgesChange={onEdgesChange}
+                                        onConnect={onConnect}
+                                        onNodeClick={onNodeClick}
+                                        onPaneClick={onPaneClick}
+                                        onDragOver={onDragOver}
+                                        onDrop={onDrop}
+                                        nodeTypes={nodeTypes}
+                                        snapToGrid={false}
+                                        nodesDraggable={true}
+                                        nodesConnectable={true}
+                                        elementsSelectable={true}
+                                        selectNodesOnDrag={false}
+                                        multiSelectionKeyCode="Shift"
+                                        panOnDrag={true}
+                                        minZoom={0.2}
+                                        maxZoom={4}
+                                        defaultEdgeOptions={defaultEdgeOptions}
+                                    >
+                                        <Background color="#2a2a4a" gap={20} />
+                                        <Controls />
+                                        <MiniMap
+                                            nodeColor={miniMapNodeColor}
+                                            maskColor="rgba(26, 26, 46, 0.7)"
+                                            style={{
+                                                backgroundColor: '#0f0f1a',
+                                                height: 150,
+                                                width: 200
+                                            }}
+                                            zoomable
+                                            pannable
+                                        />
+                                    </ReactFlow>
+                                </div>
+
+                                {/* Debug Info Panel */}
+                                {debugMode && (
+                                    <div style={{
+                                        position: 'absolute',
+                                        bottom: 10,
+                                        left: 10,
+                                        background: 'rgba(230, 126, 34, 0.9)',
+                                        color: '#fff',
+                                        padding: '8px 16px',
+                                        borderRadius: 6,
+                                        fontSize: 12,
+                                        fontWeight: 500,
+                                        zIndex: 100,
+                                    }}>
+                                        🐛 Debug Mode Active | Breakpoints: {breakpoints.length} | {executingNodeId ? `Executing: ${executingNodeId}` : 'Idle'}
+                                        {executingNodeId && (
+                                            <button
+                                                onClick={continueFromBreakpoint}
+                                                style={{
+                                                    marginLeft: 12,
+                                                    background: '#27ae60',
+                                                    color: '#fff',
+                                                    border: 'none',
+                                                    padding: '4px 12px',
+                                                    borderRadius: 4,
+                                                    cursor: 'pointer',
+                                                    fontWeight: 500,
+                                                }}
+                                            >
+                                                ▶️ Continue
+                                            </button>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+
+                            <PropertyPanel
+                                node={selectedNodeData}
+                                onPropertyChange={updateNodeProperty}
+                            />
+                        </div>
+                    ) : (
+                        <CodeView
+                            nodes={nodes}
+                            edges={edges}
+                            onBack={() => setEditorMode('visual')}
+                        />
+                    )
+                ) : view === 'dashboard' ? (
+                    <DashboardDesigner
+                        editMode={dashboardEditMode}
+                        isRunning={isRunning}
+                        widgets={dashboardWidgets as any}
+                        layout={dashboardLayout}
+                        availableOutputs={nodes.flatMap(node => {
+                            const nodeData = node.data as any
+                            return (nodeData.outputs || []).map((output: any) => ({
+                                nodeId: node.id,
+                                nodeLabel: nodeData.label || node.id,
+                                portId: output.id,
+                                portName: output.name
+                            }))
+                        })}
+                        onWidgetsChange={(newWidgets) => {
+                            setDashboardWidgets(newWidgets as any)
+                            // Save to localStorage
+                            const savedProject = localStorage.getItem('daq-project')
+                            if (savedProject) {
+                                const project = JSON.parse(savedProject)
+                                project.ui = { ...project.ui, widgets: newWidgets }
+                                localStorage.setItem('daq-project', JSON.stringify(project))
+                            }
+                        }}
+                        onLayoutChange={(newLayout) => {
+                            setDashboardLayout(newLayout)
+                            // Save to localStorage
+                            const savedProject = localStorage.getItem('daq-project')
+                            if (savedProject) {
+                                const project = JSON.parse(savedProject)
+                                project.ui = { ...project.ui, layout: newLayout }
+                                localStorage.setItem('daq-project', JSON.stringify(project))
+                            }
+                        }}
+                    />
+                ) : view === 'flowdesigner' ? (
+                    <FlowDesigner
+                        onFlowChange={(flow) => {
+                            console.log('Flow updated:', flow)
+                            // Could save to project state here
+                        }}
+                        onNodeSelect={(node) => {
+                            console.log('Node selected:', node)
+                        }}
+                    />
+                ) : view === 'industry' ? (
+                    <IndustryWidgets />
+                ) : view === 'blockly' ? (
+                    <BlocklyEditor />
+                ) : view === 'commlog' ? (
+                    <CommLogViewer />
+                ) : view === 'replay' ? (
+                    <DataReplayPanel />
+                ) : view === 'history' ? (
+                    <HistoryDataViewer />
+                ) : view === 'scheduler' ? (
+                    <TaskSchedulerPanel />
+                ) : null}
                 <DaqEngine nodes={nodes} isRunning={isRunning} />
             </div>
+
+            {/* AI Chat Panel */}
+            <AIChat
+                isOpen={showAIChat}
+                onClose={() => setShowAIChat(false)}
+                projectContext={{
+                    nodes,
+                    edges,
+                    projectName
+                }}
+            />
+
+            {/* CI/CD Panel */}
+            <CICDPanel
+                isOpen={showCICDPanel}
+                onClose={() => setShowCICDPanel(false)}
+            />
+
+            {/* Settings Panel */}
+            {showSettingsPanel && (
+                <div style={{
+                    position: 'fixed',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    background: 'rgba(0,0,0,0.7)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    zIndex: 1000,
+                }}>
+                    <div style={{
+                        background: '#1e1e2e',
+                        borderRadius: 16,
+                        padding: 24,
+                        maxWidth: 600,
+                        maxHeight: '80vh',
+                        overflow: 'auto',
+                        position: 'relative',
+                    }}>
+                        <button
+                            onClick={() => setShowSettingsPanel(false)}
+                            style={{
+                                position: 'absolute',
+                                top: 16,
+                                right: 16,
+                                background: 'rgba(255,255,255,0.1)',
+                                border: 'none',
+                                color: '#fff',
+                                width: 32,
+                                height: 32,
+                                borderRadius: 8,
+                                cursor: 'pointer',
+                            }}
+                        >
+                            ✕
+                        </button>
+                        <SettingsPanel />
+                    </div>
+                </div>
+            )}
+
+            {/* Project List Dialog */}
+            {showProjectList && (
+                <div style={{
+                    position: 'fixed',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    background: 'rgba(0,0,0,0.7)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    zIndex: 1000,
+                }}>
+                    <div style={{
+                        background: '#1e1e2e',
+                        borderRadius: 16,
+                        padding: 24,
+                        minWidth: 600,
+                        maxWidth: 800,
+                        maxHeight: '80vh',
+                        overflow: 'auto',
+                    }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+                            <h2 style={{ color: '#fff', margin: 0 }}>📂 项目管理</h2>
+                            <div style={{ display: 'flex', gap: 8 }}>
+                                <input
+                                    ref={importProjectRef}
+                                    type="file"
+                                    accept=".daq,.json"
+                                    onChange={handleImportProject}
+                                    style={{ display: 'none' }}
+                                />
+                                <button
+                                    onClick={() => importProjectRef.current?.click()}
+                                    style={{
+                                        background: '#27ae60',
+                                        border: 'none',
+                                        color: '#fff',
+                                        padding: '6px 12px',
+                                        borderRadius: 6,
+                                        cursor: 'pointer',
+                                        fontSize: 12,
+                                    }}
+                                >
+                                    📤 导入
+                                </button>
+                                <button
+                                    onClick={() => setShowProjectList(false)}
+                                    style={{
+                                        background: 'rgba(255,255,255,0.1)',
+                                        border: 'none',
+                                        color: '#fff',
+                                        width: 32,
+                                        height: 32,
+                                        borderRadius: 8,
+                                        cursor: 'pointer',
+                                    }}
+                                >
+                                    ✕
+                                </button>
+                            </div>
+                        </div>
+
+                        {recentProjects.length === 0 ? (
+                            <div style={{ color: '#888', textAlign: 'center', padding: 40 }}>
+                                暂无已保存的项目
+                            </div>
+                        ) : (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                                {recentProjects.map((project) => (
+                                    <div
+                                        key={project.fileName}
+                                        style={{
+                                            background: '#2a2a4a',
+                                            padding: '12px 16px',
+                                            borderRadius: 8,
+                                            display: 'flex',
+                                            justifyContent: 'space-between',
+                                            alignItems: 'center',
+                                        }}
+                                    >
+                                        <div
+                                            style={{ flex: 1, cursor: 'pointer' }}
+                                            onClick={() => loadProjectFromFile(project.fileName)}
+                                        >
+                                            <div style={{ color: '#fff', fontWeight: 500 }}>{project.name}</div>
+                                            <div style={{ color: '#888', fontSize: 12 }}>
+                                                {project.fileName} · {new Date(project.modifiedAt).toLocaleString()}
+                                            </div>
+                                        </div>
+                                        <div style={{ display: 'flex', gap: 4 }}>
+                                            <button
+                                                onClick={(e) => { e.stopPropagation(); setRenameDialog({ show: true, fileName: project.fileName, currentName: project.name }); setNewProjectName(project.name); }}
+                                                title="重命名"
+                                                style={{ background: 'rgba(255,255,255,0.1)', border: 'none', color: '#fff', padding: '4px 8px', borderRadius: 4, cursor: 'pointer', fontSize: 12 }}
+                                            >
+                                                ✏️
+                                            </button>
+                                            <button
+                                                onClick={(e) => { e.stopPropagation(); duplicateProject(project.fileName, project.name); }}
+                                                title="复制"
+                                                style={{ background: 'rgba(255,255,255,0.1)', border: 'none', color: '#fff', padding: '4px 8px', borderRadius: 4, cursor: 'pointer', fontSize: 12 }}
+                                            >
+                                                📋
+                                            </button>
+                                            <button
+                                                onClick={(e) => { e.stopPropagation(); downloadSavedProject(project.fileName); }}
+                                                title="下载"
+                                                style={{ background: 'rgba(255,255,255,0.1)', border: 'none', color: '#fff', padding: '4px 8px', borderRadius: 4, cursor: 'pointer', fontSize: 12 }}
+                                            >
+                                                📥
+                                            </button>
+                                            <button
+                                                onClick={(e) => { e.stopPropagation(); deleteProject(project.fileName); }}
+                                                title="删除"
+                                                style={{ background: 'rgba(231,76,60,0.3)', border: 'none', color: '#e74c3c', padding: '4px 8px', borderRadius: 4, cursor: 'pointer', fontSize: 12 }}
+                                            >
+                                                🗑️
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
+
+            {/* Rename Dialog */}
+            {renameDialog.show && (
+                <div style={{
+                    position: 'fixed',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    background: 'rgba(0,0,0,0.8)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    zIndex: 1100,
+                }}>
+                    <div style={{
+                        background: '#1e1e2e',
+                        borderRadius: 12,
+                        padding: 24,
+                        minWidth: 400,
+                    }}>
+                        <h3 style={{ color: '#fff', margin: '0 0 16px 0' }}>重命名项目</h3>
+                        <input
+                            type="text"
+                            value={newProjectName}
+                            onChange={(e) => setNewProjectName(e.target.value)}
+                            placeholder="输入新名称"
+                            style={{
+                                width: '100%',
+                                padding: '10px 12px',
+                                background: '#2a2a4a',
+                                border: '1px solid #3a3a5a',
+                                borderRadius: 6,
+                                color: '#fff',
+                                fontSize: 14,
+                                boxSizing: 'border-box',
+                            }}
+                            onKeyDown={(e) => { if (e.key === 'Enter') renameProject(); }}
+                            autoFocus
+                        />
+                        <div style={{ display: 'flex', gap: 8, marginTop: 16, justifyContent: 'flex-end' }}>
+                            <button
+                                onClick={() => setRenameDialog({ show: false, fileName: '', currentName: '' })}
+                                style={{ background: 'rgba(255,255,255,0.1)', border: 'none', color: '#fff', padding: '8px 16px', borderRadius: 6, cursor: 'pointer' }}
+                            >
+                                取消
+                            </button>
+                            <button
+                                onClick={renameProject}
+                                style={{ background: '#3498db', border: 'none', color: '#fff', padding: '8px 16px', borderRadius: 6, cursor: 'pointer' }}
+                            >
+                                确定
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Data Flow Debugger Panel */}
+            <DataFlowDebugger
+                isOpen={showDebugger}
+                onClose={() => setShowDebugger(false)}
+                isRunning={false}
+                nodes={nodes}
+                edges={edges}
+                executingNodeId={executingNodeId}
+                breakpoints={breakpoints}
+                onToggleBreakpoint={(nodeId) => {
+                    setBreakpoints(prev =>
+                        prev.includes(nodeId)
+                            ? prev.filter(id => id !== nodeId)
+                            : [...prev, nodeId]
+                    )
+                }}
+                onStepOver={() => { /* TODO: Implement step over */ }}
+                onContinue={() => { /* TODO: Implement continue */ }}
+                onPause={() => { /* TODO: Implement pause */ }}
+            />
+
+            {/* AI Assistant Panel */}
+            <AIAssistantPanel
+                isOpen={showAIAssistant}
+                onClose={() => setShowAIAssistant(false)}
+                projectContext={{
+                    nodes,
+                    edges,
+                    projectName,
+                }}
+                onAddComponent={(suggestion) => {
+                    // Add suggested component to canvas
+                    const newNode = {
+                        id: `${suggestion.type}-${Date.now()}`,
+                        type: 'daqNode',
+                        position: { x: 400, y: 300 },
+                        data: {
+                            label: suggestion.name,
+                            componentType: suggestion.type,
+                            category: suggestion.category,
+                            icon: suggestion.icon,
+                            inputs: [],
+                            outputs: [],
+                            properties: suggestion.properties || {},
+                        },
+                    }
+                    setNodes(nds => [...nds, newNode])
+                    showToast(`已添加 ${suggestion.name}`, 'success')
+                }}
+                onApplyCode={(code, nodeId) => {
+                    // Apply generated code to custom script node
+                    if (nodeId) {
+                        setNodes(nds => nds.map(n => {
+                            if (n.id === nodeId) {
+                                return {
+                                    ...n,
+                                    data: {
+                                        ...n.data,
+                                        properties: {
+                                            ...n.data.properties,
+                                            generatedCode: code,
+                                        }
+                                    }
+                                }
+                            }
+                            return n
+                        }))
+                    }
+                    showToast('代码已应用', 'success')
+                }}
+            />
+
+            {/* Git Panel */}
+            <GitPanel
+                isOpen={showGitPanel}
+                onClose={() => setShowGitPanel(false)}
+            />
         </div>
     )
 }

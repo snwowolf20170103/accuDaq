@@ -3,9 +3,25 @@
  * 功能：拖拽放置控件、调整大小、变量绑定、实时预览
  */
 
-import { useState, useCallback } from 'react'
-import GridLayout, { Layout } from 'react-grid-layout'
+import React, { useState, useCallback } from 'react'
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+import GridLayoutOriginal from 'react-grid-layout'
+const GridLayout: any = GridLayoutOriginal
 import 'react-grid-layout/css/styles.css'
+
+// Define our own LayoutItem type to match react-grid-layout
+interface LayoutItem {
+    i: string
+    x: number
+    y: number
+    w: number
+    h: number
+    minW?: number
+    maxW?: number
+    minH?: number
+    maxH?: number
+    static?: boolean
+}
 import 'react-resizable/css/styles.css'
 import './DashboardDesigner.css'
 
@@ -13,6 +29,8 @@ import { LEDWidget } from './widgets/LEDWidget'
 import { GaugeWidget } from './widgets/GaugeWidget'
 import { SwitchWidget } from './widgets/SwitchWidget'
 import { NumberInputWidget } from './widgets/NumberInputWidget'
+import { LineChartWidget } from './widgets/LineChartWidget'
+import { useMqtt, MqttMessage } from '../hooks/useMqtt'
 
 export interface Widget {
     id: string
@@ -27,26 +45,72 @@ export interface VariableBinding {
     path: string
 }
 
+interface NodeOutput {
+    nodeId: string
+    nodeLabel: string
+    portId: string
+    portName: string
+}
+
 interface DashboardDesignerProps {
     editMode?: boolean
+    isRunning?: boolean
     widgets?: Widget[]
-    layout?: Layout[]
+    layout?: LayoutItem[]
+    brokerHost?: string
+    availableOutputs?: NodeOutput[]
     onWidgetsChange?: (widgets: Widget[]) => void
-    onLayoutChange?: (layout: Layout[]) => void
+    onLayoutChange?: (layout: LayoutItem[]) => void
 }
 
 const DashboardDesigner = ({
     editMode = true,
+    isRunning = false,
     widgets: initialWidgets = [],
     layout: initialLayout = [],
+    brokerHost = 'localhost',
+    availableOutputs = [],
     onWidgetsChange,
     onLayoutChange
 }: DashboardDesignerProps) => {
     const [widgets, setWidgets] = useState<Widget[]>(initialWidgets)
-    const [layout, setLayout] = useState<Layout[]>(initialLayout)
+    const [layout, setLayout] = useState<LayoutItem[]>(initialLayout)
     const [selectedWidget, setSelectedWidget] = useState<string | null>(null)
     const [showWidgetToolbar, setShowWidgetToolbar] = useState(editMode)
     const [showPropertyPanel, setShowPropertyPanel] = useState(false)
+
+    // MQTT connection for real-time data
+    const { isConnected, messages, history, subscribe } = useMqtt({
+        brokerUrl: isRunning ? `ws://${brokerHost}:8083/mqtt` : ''
+    })
+
+    // Subscribe to all widget topics when running
+    React.useEffect(() => {
+        if (isConnected && isRunning) {
+            widgets.forEach(w => {
+                const topic = w.binding?.path || w.config?.topic || w.config?.dataSource
+                if (topic) {
+                    subscribe(topic)
+                }
+            })
+            // Also subscribe to common topics
+            subscribe('accudaq/#')
+            subscribe('sensors/#')
+        }
+    }, [isConnected, isRunning, widgets, subscribe])
+
+    // Sync widgets from props when they change
+    React.useEffect(() => {
+        if (initialWidgets.length > 0) {
+            setWidgets(initialWidgets)
+        }
+    }, [initialWidgets])
+
+    React.useEffect(() => {
+        if (initialLayout.length > 0) {
+            setLayout(initialLayout)
+        }
+    }, [initialLayout])
 
     // 添加控件
     const handleAddWidget = useCallback((type: Widget['type']) => {
@@ -59,7 +123,7 @@ const DashboardDesigner = ({
             config: getDefaultConfig(type)
         }
 
-        const newLayoutItem: Layout = {
+        const newLayoutItem: LayoutItem = {
             i: id,
             x: (widgets.length * 2) % 12,
             y: Infinity, // 自动放置到最底部
@@ -106,10 +170,32 @@ const DashboardDesigner = ({
     }, [widgets, onWidgetsChange])
 
     // 布局变化
-    const handleLayoutChange = useCallback((newLayout: Layout[]) => {
+    const handleLayoutChange = useCallback((newLayout: LayoutItem[]) => {
         setLayout(newLayout)
         onLayoutChange?.(newLayout)
     }, [onLayoutChange])
+
+    // Get real-time value for a widget
+    const getWidgetValue = (widget: Widget): any => {
+        const topic = widget.binding?.path || widget.config?.topic || widget.config?.dataSource
+        if (!topic || !isRunning) {
+            return getMockValue(widget.type)
+        }
+        const msg = messages[topic]
+        if (msg) {
+            return typeof msg.payload === 'number' ? msg.payload : parseFloat(msg.payload) || msg.payload
+        }
+        return getMockValue(widget.type)
+    }
+
+    // Get history data for chart widgets
+    const getWidgetHistory = (widget: Widget): MqttMessage[] => {
+        const topic = widget.binding?.path || widget.config?.topic || widget.config?.dataSource
+        if (!topic || !isRunning) {
+            return []
+        }
+        return history[topic] || []
+    }
 
     // 渲染控件
     const renderWidget = (widget: Widget) => {
@@ -118,18 +204,26 @@ const DashboardDesigner = ({
             ...widget.config
         }
 
-        // 模拟数据（实际应从 MQTT 或全局变量获取）
-        const mockValue = getMockValue(widget.type)
+        const value = getWidgetValue(widget)
 
         switch (widget.type) {
             case 'led':
-                return <LEDWidget value={mockValue} {...commonProps} />
+                return <LEDWidget value={!!value} {...commonProps} />
             case 'gauge':
-                return <GaugeWidget value={mockValue} {...commonProps} />
+                return <GaugeWidget value={typeof value === 'number' ? value : parseFloat(value) || 0} {...commonProps} />
             case 'switch':
-                return <SwitchWidget value={mockValue} {...commonProps} />
+                return <SwitchWidget value={!!value} {...commonProps} />
             case 'number_input':
-                return <NumberInputWidget value={mockValue} {...commonProps} />
+                return <NumberInputWidget value={typeof value === 'number' ? value : parseFloat(value) || 0} {...commonProps} />
+            case 'line_chart':
+                return (
+                    <LineChartWidget
+                        label={widget.title}
+                        data={getWidgetHistory(widget)}
+                        dataKey="value"
+                        color={widget.config?.color || '#4a90d9'}
+                    />
+                )
             default:
                 return (
                     <div style={{
@@ -182,6 +276,11 @@ const DashboardDesigner = ({
                             icon="🔢"
                             name="数值输入"
                             onClick={() => handleAddWidget('number_input')}
+                        />
+                        <WidgetToolbarItem
+                            icon="📈"
+                            name="折线图"
+                            onClick={() => handleAddWidget('line_chart')}
                         />
                     </div>
                 </div>
@@ -240,7 +339,7 @@ const DashboardDesigner = ({
                             cols={12}
                             rowHeight={60}
                             width={1200}
-                            onLayoutChange={handleLayoutChange}
+                            onLayoutChange={(newLayout: any) => handleLayoutChange(newLayout)}
                             isDraggable={editMode}
                             isResizable={editMode}
                             compactType="vertical"
@@ -249,9 +348,8 @@ const DashboardDesigner = ({
                             {widgets.map(widget => (
                                 <div
                                     key={widget.id}
-                                    className={`dashboard-widget-container ${
-                                        selectedWidget === widget.id ? 'selected' : ''
-                                    }`}
+                                    className={`dashboard-widget-container ${selectedWidget === widget.id ? 'selected' : ''
+                                        }`}
                                     onClick={() => {
                                         setSelectedWidget(widget.id)
                                         setShowPropertyPanel(true)
@@ -356,12 +454,43 @@ const DashboardDesigner = ({
                                 </select>
                             </div>
 
-                            {selectedWidgetData.binding && (
+                            {selectedWidgetData.binding && selectedWidgetData.binding.type === 'node_output' && (
                                 <div className="property-group">
-                                    <label>变量路径</label>
+                                    <label>选择节点输出</label>
+                                    {availableOutputs.length > 0 ? (
+                                        <select
+                                            value={selectedWidgetData.binding.path}
+                                            onChange={(e) =>
+                                                handleUpdateWidget(selectedWidgetData.id, {
+                                                    binding: {
+                                                        ...selectedWidgetData.binding!,
+                                                        path: e.target.value
+                                                    }
+                                                })
+                                            }
+                                        >
+                                            <option value="">请选择...</option>
+                                            {availableOutputs.map(output => (
+                                                <option
+                                                    key={`${output.nodeId}.${output.portId}`}
+                                                    value={`${output.nodeId}.${output.portId}`}
+                                                >
+                                                    {output.nodeLabel} → {output.portName}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    ) : (
+                                        <div className="empty-hint">无可用节点输出</div>
+                                    )}
+                                </div>
+                            )}
+
+                            {selectedWidgetData.binding && selectedWidgetData.binding.type !== 'node_output' && (
+                                <div className="property-group">
+                                    <label>变量路径 / MQTT Topic</label>
                                     <input
                                         type="text"
-                                        placeholder="例如: mock_device_1.value"
+                                        placeholder="例如: sensors/temperature"
                                         value={selectedWidgetData.binding.path}
                                         onChange={(e) =>
                                             handleUpdateWidget(selectedWidgetData.id, {
@@ -522,11 +651,12 @@ const getDefaultTitle = (type: Widget['type']): string => {
 }
 
 const getDefaultConfig = (type: Widget['type']): Record<string, any> => {
-    const configs = {
+    const configs: Record<Widget['type'], Record<string, any>> = {
         led: { colorOn: '#27ae60', colorOff: '#e74c3c', size: 40 },
         gauge: { min: 0, max: 100, unit: '', color: '#27ae60' },
         switch: { colorOn: '#27ae60', colorOff: '#95a5a6', size: 'medium' },
-        number_input: { min: 0, max: 100, step: 1, unit: '', precision: 2 }
+        number_input: { min: 0, max: 100, step: 1, unit: '', precision: 2 },
+        line_chart: { color: '#4a90d9', dataKey: 'value' }
     }
     return configs[type] || {}
 }
@@ -543,11 +673,12 @@ const getDefaultHeight = (type: Widget['type']): number => {
 
 const getMockValue = (type: Widget['type']): any => {
     // 模拟数据，实际应从 MQTT 或全局变量获取
-    const mockValues = {
+    const mockValues: Record<Widget['type'], any> = {
         led: true,
         gauge: 65.5,
         switch: false,
-        number_input: 42
+        number_input: 42,
+        line_chart: []
     }
     return mockValues[type] || null
 }

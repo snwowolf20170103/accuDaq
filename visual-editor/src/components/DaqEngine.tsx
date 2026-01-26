@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, memo } from 'react'
 import { useMqtt } from '../hooks/useMqtt'
 
 interface DaqEngineProps {
@@ -97,4 +97,18 @@ const DaqEngine = ({ nodes, isRunning }: DaqEngineProps) => {
     return null // Invisible component
 }
 
-export default DaqEngine
+// Custom comparison to prevent re-renders when only position changes (dragging)
+const arePropsEqual = (prev: DaqEngineProps, next: DaqEngineProps) => {
+    if (prev.isRunning !== next.isRunning) return false
+    if (prev.nodes.length !== next.nodes.length) return false
+
+    // Check if any node data changed (ignoring position/selection)
+    for (let i = 0; i < prev.nodes.length; i++) {
+        if (prev.nodes[i].id !== next.nodes[i].id) return false
+        if (prev.nodes[i].data !== next.nodes[i].data) return false
+    }
+
+    return true
+}
+
+export default memo(DaqEngine, arePropsEqual)

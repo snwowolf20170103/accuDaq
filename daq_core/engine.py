@@ -142,6 +142,26 @@ class DAQEngine:
                     if value is not None and conn.target_port in target.input_ports:
                         target.input_ports[conn.target_port].set_value(value)
 
+    # 需要在主循环中主动调用 process() 的组件
+    # MQTT/MockDevice 有自己的线程，不需要在这里处理
+    _PROCESS_COMPONENTS = {
+        "MathOperation", "Compare", "CSVStorage", "CustomScript",
+        "ThresholdAlarm", "DebugPrint", "GlobalVariable", "ModbusClient",
+        "WhileLoop", "Conditional",
+        # 高级算法组件
+        "FFT", "MovingAverageFilter", "LowPassFilter", "HighPassFilter",
+        "PIDController", "KalmanFilter", "Statistics",
+        # 协议子组件（需要主动轮询）
+        "EtherCATSlaveIO", "CANopenNode", "CANopenPDO",
+        "OPCUANodeReader", "OPCUANodeWriter", "OPCUASubscription",
+        # 串口和 SCPI 组件
+        "SerialPort", "ModbusRTU", "SCPIDevice",
+        # USB 和蓝牙组件
+        "USBDevice", "USBHID", "BluetoothRFCOMM", "BLEDevice",
+        # FPGA 子组件
+        "FPGARegisterRead", "FPGARegisterWrite", "FPGAADC", "FPGADAC", "FPGADMA", "FPGAPWM",
+    }
+
     def _main_loop(self):
         """主循环 - 定时触发组件处理"""
         while not self._stop_event.is_set():
@@ -153,8 +173,7 @@ class DAQEngine:
                 for component in self._components.values():
                     if component._is_running:
                         # 只对需要主动触发的组件调用 process
-                        # MQTT/MockDevice 有自己的线程，不需要在这里处理
-                        if component.component_name in ["MathOperation", "Compare", "CSVStorage", "CustomScript"]:
+                        if component.component_name in self._PROCESS_COMPONENTS:
                             component.process()
 
             except Exception as e:

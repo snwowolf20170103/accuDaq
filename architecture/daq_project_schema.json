@@ -30,7 +30,8 @@
                 "schemaVersion": {
                     "type": "string",
                     "enum": [
-                        "0.1.0"
+                        "0.1.0",
+                        "2.0.0"
                     ]
                 }
             }
@@ -182,8 +183,7 @@
                         "type": "object",
                         "required": [
                             "id",
-                            "type",
-                            "layout"
+                            "type"
                         ],
                         "properties": {
                             "id": {
@@ -197,13 +197,39 @@
                                     "ui:chart",
                                     "ui:led",
                                     "ui:button",
-                                    "ui:input"
+                                    "ui:input",
+                                    "line_chart",
+                                    "gauge",
+                                    "led"
                                 ]
                             },
                             "label": {
                                 "type": "string"
                             },
                             "layout": {
+                                "type": "object",
+                                "required": [
+                                    "x",
+                                    "y",
+                                    "w",
+                                    "h"
+                                ],
+                                "properties": {
+                                    "x": {
+                                        "type": "integer"
+                                    },
+                                    "y": {
+                                        "type": "integer"
+                                    },
+                                    "w": {
+                                        "type": "integer"
+                                    },
+                                    "h": {
+                                        "type": "integer"
+                                    }
+                                }
+                            },
+                            "position": {
                                 "type": "object",
                                 "required": [
                                     "x",
