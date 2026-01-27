@@ -167,6 +167,341 @@ export default defineConfig({
                             running: engineProcess !== null,
                             pid: engineProcess?.pid || null
                         }));
+                    } else if (req.url?.startsWith('/api/projects') && req.method === 'GET') {
+                        // List all saved projects
+                        const projectsDir = path.resolve(__dirname, '../projects');
+                        if (!fs.existsSync(projectsDir)) {
+                            fs.mkdirSync(projectsDir, { recursive: true });
+                        }
+
+                        try {
+                            const files = fs.readdirSync(projectsDir)
+                                .filter(f => f.endsWith('.daq'))
+                                .map(fileName => {
+                                    const filePath = path.join(projectsDir, fileName);
+                                    const stats = fs.statSync(filePath);
+                                    let projectName = fileName.replace('.daq', '');
+
+                                    try {
+                                        const content = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+                                        projectName = content.meta?.name || projectName;
+                                    } catch { }
+
+                                    return {
+                                        fileName,
+                                        name: projectName,
+                                        modifiedAt: stats.mtime.toISOString()
+                                    };
+                                })
+                                .sort((a, b) => new Date(b.modifiedAt).getTime() - new Date(a.modifiedAt).getTime());
+
+                            res.statusCode = 200;
+                            res.setHeader('Content-Type', 'application/json');
+                            res.end(JSON.stringify({ projects: files }));
+                        } catch (err: any) {
+                            res.statusCode = 500;
+                            res.setHeader('Content-Type', 'application/json');
+                            res.end(JSON.stringify({ error: err.message }));
+                        }
+                    } else if (req.url?.startsWith('/api/project/save') && req.method === 'POST') {
+                        // Save project to server
+                        let body = '';
+                        req.on('data', chunk => { body += chunk.toString(); });
+                        req.on('end', () => {
+                            try {
+                                const { name, project } = JSON.parse(body);
+                                const projectsDir = path.resolve(__dirname, '../projects');
+                                if (!fs.existsSync(projectsDir)) {
+                                    fs.mkdirSync(projectsDir, { recursive: true });
+                                }
+
+                                const sanitizedName = name.replace(/[^a-zA-Z0-9_\-\u4e00-\u9fa5]/g, '_');
+                                const fileName = `${sanitizedName}.daq`;
+                                const filePath = path.join(projectsDir, fileName);
+
+                                fs.writeFileSync(filePath, JSON.stringify(project, null, 2));
+
+                                res.statusCode = 200;
+                                res.setHeader('Content-Type', 'application/json');
+                                res.end(JSON.stringify({ success: true, fileName }));
+                            } catch (err: any) {
+                                res.statusCode = 400;
+                                res.setHeader('Content-Type', 'application/json');
+                                res.end(JSON.stringify({ error: err.message }));
+                            }
+                        });
+                    } else if (req.url?.startsWith('/api/project/load') && req.method === 'GET') {
+                        // Load project from server
+                        const url = new URL(req.url, 'http://localhost');
+                        const fileName = url.searchParams.get('file');
+
+                        if (!fileName) {
+                            res.statusCode = 400;
+                            res.setHeader('Content-Type', 'application/json');
+                            res.end(JSON.stringify({ error: 'Missing file parameter' }));
+                            return;
+                        }
+
+                        const projectsDir = path.resolve(__dirname, '../projects');
+                        const filePath = path.join(projectsDir, fileName);
+
+                        if (!fs.existsSync(filePath)) {
+                            res.statusCode = 404;
+                            res.setHeader('Content-Type', 'application/json');
+                            res.end(JSON.stringify({ error: 'Project not found' }));
+                            return;
+                        }
+
+                        try {
+                            const content = fs.readFileSync(filePath, 'utf-8');
+                            const project = JSON.parse(content);
+                            res.statusCode = 200;
+                            res.setHeader('Content-Type', 'application/json');
+                            res.end(JSON.stringify({ project }));
+                        } catch (err: any) {
+                            res.statusCode = 500;
+                            res.setHeader('Content-Type', 'application/json');
+                            res.end(JSON.stringify({ error: err.message }));
+                        }
+                    } else if (req.url?.startsWith('/api/project/import') && req.method === 'POST') {
+                        // Import project (upload to server)
+                        let body = '';
+                        req.on('data', chunk => { body += chunk.toString(); });
+                        req.on('end', () => {
+                            try {
+                                const project = JSON.parse(body);
+                                const projectsDir = path.resolve(__dirname, '../projects');
+                                if (!fs.existsSync(projectsDir)) {
+                                    fs.mkdirSync(projectsDir, { recursive: true });
+                                }
+
+                                const projectName = project.meta?.name || 'Imported_Project';
+                                const sanitizedName = projectName.replace(/[^a-zA-Z0-9_\-\u4e00-\u9fa5]/g, '_');
+
+                                // Generate unique filename if exists
+                                let fileName = `${sanitizedName}.daq`;
+                                let counter = 1;
+                                while (fs.existsSync(path.join(projectsDir, fileName))) {
+                                    fileName = `${sanitizedName}_${counter}.daq`;
+                                    counter++;
+                                }
+
+                                const filePath = path.join(projectsDir, fileName);
+                                fs.writeFileSync(filePath, JSON.stringify(project, null, 2));
+
+                                res.statusCode = 200;
+                                res.setHeader('Content-Type', 'application/json');
+                                res.end(JSON.stringify({ success: true, fileName }));
+                            } catch (err: any) {
+                                res.statusCode = 400;
+                                res.setHeader('Content-Type', 'application/json');
+                                res.end(JSON.stringify({ error: err.message }));
+                            }
+                        });
+                    } else if (req.url?.startsWith('/api/project/export') && req.method === 'GET') {
+                        // Export/download project from server
+                        const url = new URL(req.url, 'http://localhost');
+                        const fileName = url.searchParams.get('file');
+
+                        if (!fileName) {
+                            res.statusCode = 400;
+                            res.end('Missing file parameter');
+                            return;
+                        }
+
+                        const projectsDir = path.resolve(__dirname, '../projects');
+                        const filePath = path.join(projectsDir, fileName);
+
+                        if (!fs.existsSync(filePath)) {
+                            res.statusCode = 404;
+                            res.end('Project not found');
+                            return;
+                        }
+
+                        res.setHeader('Content-Type', 'application/json');
+                        res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+                        const fileStream = fs.createReadStream(filePath);
+                        fileStream.pipe(res);
+                    } else if (req.url?.startsWith('/api/project/delete') && req.method === 'DELETE') {
+                        // Delete project from server
+                        const url = new URL(req.url, 'http://localhost');
+                        const fileName = url.searchParams.get('file');
+
+                        if (!fileName) {
+                            res.statusCode = 400;
+                            res.setHeader('Content-Type', 'application/json');
+                            res.end(JSON.stringify({ error: 'Missing file parameter' }));
+                            return;
+                        }
+
+                        const projectsDir = path.resolve(__dirname, '../projects');
+                        const filePath = path.join(projectsDir, fileName);
+
+                        if (!fs.existsSync(filePath)) {
+                            res.statusCode = 404;
+                            res.setHeader('Content-Type', 'application/json');
+                            res.end(JSON.stringify({ error: 'Project not found' }));
+                            return;
+                        }
+
+                        try {
+                            fs.unlinkSync(filePath);
+                            res.statusCode = 200;
+                            res.setHeader('Content-Type', 'application/json');
+                            res.end(JSON.stringify({ success: true }));
+                        } catch (err: any) {
+                            res.statusCode = 500;
+                            res.setHeader('Content-Type', 'application/json');
+                            res.end(JSON.stringify({ error: err.message }));
+                        }
+                    } else if (req.url?.startsWith('/api/project/rename') && req.method === 'POST') {
+                        // Rename project
+                        let body = '';
+                        req.on('data', chunk => { body += chunk.toString(); });
+                        req.on('end', () => {
+                            try {
+                                const { oldFile, newName } = JSON.parse(body);
+                                const projectsDir = path.resolve(__dirname, '../projects');
+                                const oldPath = path.join(projectsDir, oldFile);
+
+                                if (!fs.existsSync(oldPath)) {
+                                    res.statusCode = 404;
+                                    res.setHeader('Content-Type', 'application/json');
+                                    res.end(JSON.stringify({ error: 'Project not found' }));
+                                    return;
+                                }
+
+                                const sanitizedName = newName.replace(/[^a-zA-Z0-9_\-\u4e00-\u9fa5]/g, '_');
+                                const newFileName = `${sanitizedName}.daq`;
+                                const newPath = path.join(projectsDir, newFileName);
+
+                                if (fs.existsSync(newPath) && oldPath !== newPath) {
+                                    res.statusCode = 400;
+                                    res.setHeader('Content-Type', 'application/json');
+                                    res.end(JSON.stringify({ error: '项目名称已存在' }));
+                                    return;
+                                }
+
+                                // Update project meta name
+                                const content = JSON.parse(fs.readFileSync(oldPath, 'utf-8'));
+                                if (content.meta) {
+                                    content.meta.name = newName;
+                                }
+                                fs.writeFileSync(newPath, JSON.stringify(content, null, 2));
+
+                                if (oldPath !== newPath) {
+                                    fs.unlinkSync(oldPath);
+                                }
+
+                                res.statusCode = 200;
+                                res.setHeader('Content-Type', 'application/json');
+                                res.end(JSON.stringify({ success: true, fileName: newFileName }));
+                            } catch (err: any) {
+                                res.statusCode = 500;
+                                res.setHeader('Content-Type', 'application/json');
+                                res.end(JSON.stringify({ error: err.message }));
+                            }
+                        });
+                    } else if (req.url?.startsWith('/api/project/duplicate') && req.method === 'POST') {
+                        // Duplicate project
+                        let body = '';
+                        req.on('data', chunk => { body += chunk.toString(); });
+                        req.on('end', () => {
+                            try {
+                                const { sourceFile, newName } = JSON.parse(body);
+                                const projectsDir = path.resolve(__dirname, '../projects');
+                                const sourcePath = path.join(projectsDir, sourceFile);
+
+                                if (!fs.existsSync(sourcePath)) {
+                                    res.statusCode = 404;
+                                    res.setHeader('Content-Type', 'application/json');
+                                    res.end(JSON.stringify({ error: 'Source project not found' }));
+                                    return;
+                                }
+
+                                const sanitizedName = newName.replace(/[^a-zA-Z0-9_\-\u4e00-\u9fa5]/g, '_');
+                                const newFileName = `${sanitizedName}.daq`;
+                                const newPath = path.join(projectsDir, newFileName);
+
+                                if (fs.existsSync(newPath)) {
+                                    res.statusCode = 400;
+                                    res.setHeader('Content-Type', 'application/json');
+                                    res.end(JSON.stringify({ error: '项目名称已存在' }));
+                                    return;
+                                }
+
+                                const content = JSON.parse(fs.readFileSync(sourcePath, 'utf-8'));
+                                if (content.meta) {
+                                    content.meta.name = newName;
+                                }
+                                fs.writeFileSync(newPath, JSON.stringify(content, null, 2));
+
+                                res.statusCode = 200;
+                                res.setHeader('Content-Type', 'application/json');
+                                res.end(JSON.stringify({ success: true, fileName: newFileName }));
+                            } catch (err: any) {
+                                res.statusCode = 500;
+                                res.setHeader('Content-Type', 'application/json');
+                                res.end(JSON.stringify({ error: err.message }));
+                            }
+                        });
+                    } else if (req.url === '/api/edge/data/start' && req.method === 'POST') {
+                        // Start tracking edge data via MQTT
+                        if (!global.edgeDataCache) {
+                            global.edgeDataCache = {};
+                            import('mqtt').then(({ connect }) => {
+                                // Connect to local broker
+                                const client = connect('mqtt://localhost:1883');
+
+                                client.on('connect', () => {
+                                    console.log('[Vite] Connected to MQTT broker');
+                                    // Subscribe to all topics to capture data flow
+                                    // In a real app, the engine should publish specific debug topics
+                                    // Here we simulate by listening to all and mapping to edges if possible
+                                    client.subscribe('#');
+                                });
+
+                                client.on('message', (topic, message) => {
+                                    try {
+                                        // Simple mapping: if topic contains node ID, map to outgoing edges
+                                        // Strategy: The backend engine should ideally publish to accudaq/debug/edge/{edgeId}
+                                        // For now, we will assume the topic string might contain edge ID or we map node outputs
+
+                                        // Store raw data for debugging
+                                        const payload = message.toString();
+
+                                        // Parsed value
+                                        let value;
+                                        try { value = JSON.parse(payload); } catch { value = payload; }
+
+                                        // If we have a specific debug topic convention
+                                        if (topic.startsWith('accudaq/debug/')) {
+                                            const id = topic.split('/').pop();
+                                            if (id) {
+                                                global.edgeDataCache[id] = value;
+                                            }
+                                        }
+                                    } catch (err) {
+                                        console.error('[Vite] MQTT message error:', err);
+                                    }
+                                });
+
+                                global.mqttClient = client;
+                            }).catch(err => {
+                                console.error('[Vite] Failed to load mqtt module:', err);
+                            });
+                        }
+
+                        res.statusCode = 200;
+                        res.setHeader('Content-Type', 'application/json');
+                        res.end(JSON.stringify({ status: 'started' }));
+
+                    } else if (req.url === '/api/edge/data' && req.method === 'GET') {
+                        // Return cached edge data
+                        res.statusCode = 200;
+                        res.setHeader('Content-Type', 'application/json');
+                        res.end(JSON.stringify(global.edgeDataCache || {}));
+
                     } else {
                         next();
                     }
@@ -176,6 +511,7 @@ export default defineConfig({
     ],
     server: {
         port: 3000,
+        strictPort: true, // Fail if port 3000 is occupied
         open: true
     }
 })

@@ -1,0 +1,384 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e3]:
+  - generic [ref=e4]:
+    - generic [ref=e5]:
+      - generic [ref=e6]: 🚀
+      - generic [ref=e7]: DAQ IDE
+      - generic [ref=e8]: "|"
+      - generic [ref=e9]: Untitled Project
+      - button "+ New" [ref=e10] [cursor=pointer]
+      - button "💾 Save" [ref=e11] [cursor=pointer]
+      - button "📂 Open" [ref=e12] [cursor=pointer]
+    - generic [ref=e13]:
+      - button "📊 Visual" [ref=e14] [cursor=pointer]
+      - button "💻 Code" [ref=e15] [cursor=pointer]
+      - button "Dashboard" [ref=e16] [cursor=pointer]
+      - button "🔧 流程" [ref=e17] [cursor=pointer]
+      - button "🏭 工业控件" [ref=e18] [cursor=pointer]
+      - button "🧩 Blockly" [ref=e19] [cursor=pointer]
+      - button "📡 通信日志" [ref=e20] [cursor=pointer]
+      - button "⏪ 数据回放" [ref=e21] [cursor=pointer]
+      - button "📊 历史数据" [ref=e22] [cursor=pointer]
+      - button "⏰ 任务调度" [ref=e23] [cursor=pointer]
+    - generic [ref=e24]:
+      - button "📡 设备" [ref=e25] [cursor=pointer]
+      - button "🤖 AI 助手" [ref=e26] [cursor=pointer]
+      - button "🔍 调试器" [ref=e27] [cursor=pointer]
+      - button "🐛 Debug" [ref=e28] [cursor=pointer]
+      - button "🔧 CI/CD" [ref=e29] [cursor=pointer]
+      - button "📦 Git" [ref=e30] [cursor=pointer]
+      - button "⚙️ 设置" [ref=e31] [cursor=pointer]
+      - button "▶️ RUN" [active] [ref=e32] [cursor=pointer]
+  - generic [ref=e34]:
+    - generic [ref=e35]:
+      - heading "🧩 Components" [level=2] [ref=e37]
+      - generic [ref=e38]:
+        - generic [ref=e39]:
+          - generic [ref=e40] [cursor=pointer]:
+            - generic [ref=e41]: Devices
+            - generic [ref=e42]: ▼
+          - generic [ref=e43]:
+            - generic [ref=e44]:
+              - generic [ref=e45]: 🎲
+              - generic [ref=e46]:
+                - generic [ref=e47]: Mock Device
+                - generic [ref=e48]: Simulated sensor data
+            - generic [ref=e49]:
+              - generic [ref=e50]: 🔌
+              - generic [ref=e51]:
+                - generic [ref=e52]: Serial Port
+                - generic [ref=e53]: Serial port communication
+            - generic [ref=e54]:
+              - generic [ref=e55]: 🏭
+              - generic [ref=e56]:
+                - generic [ref=e57]: Modbus RTU
+                - generic [ref=e58]: Modbus RTU serial communication
+            - generic [ref=e59]:
+              - generic [ref=e60]: 📟
+              - generic [ref=e61]:
+                - generic [ref=e62]: SCPI Device
+                - generic [ref=e63]: SCPI/VISA instrument control
+            - generic [ref=e64]:
+              - generic [ref=e65]: 🔌
+              - generic [ref=e66]:
+                - generic [ref=e67]: USB Device
+                - generic [ref=e68]: USB bulk transfer communication
+            - generic [ref=e69]:
+              - generic [ref=e70]: 🎮
+              - generic [ref=e71]:
+                - generic [ref=e72]: USB HID
+                - generic [ref=e73]: USB HID device communication
+            - generic [ref=e74]:
+              - generic [ref=e75]: 📶
+              - generic [ref=e76]:
+                - generic [ref=e77]: Bluetooth RFCOMM
+                - generic [ref=e78]: Classic Bluetooth RFCOMM communication
+            - generic [ref=e79]:
+              - generic [ref=e80]: 📡
+              - generic [ref=e81]:
+                - generic [ref=e82]: BLE Device
+                - generic [ref=e83]: Bluetooth Low Energy communication
+            - generic [ref=e84]:
+              - generic [ref=e85]: 🏭
+              - generic [ref=e86]:
+                - generic [ref=e87]: Modbus TCP
+                - generic [ref=e88]: Read from Modbus TCP device
+            - generic [ref=e89]:
+              - generic [ref=e90]: 🔲
+              - generic [ref=e91]:
+                - generic [ref=e92]: FPGA 设备
+                - generic [ref=e93]: FPGA 板卡连接管理
+            - generic [ref=e94]:
+              - generic [ref=e95]: 📖
+              - generic [ref=e96]:
+                - generic [ref=e97]: FPGA 寄存器读取
+                - generic [ref=e98]: 读取 FPGA 寄存器
+            - generic [ref=e99]:
+              - generic [ref=e100]: ✏️
+              - generic [ref=e101]:
+                - generic [ref=e102]: FPGA 寄存器写入
+                - generic [ref=e103]: 写入 FPGA 寄存器
+            - generic [ref=e104]:
+              - generic [ref=e105]: 📊
+              - generic [ref=e106]:
+                - generic [ref=e107]: FPGA ADC
+                - generic [ref=e108]: FPGA 模数转换器
+            - generic [ref=e109]:
+              - generic [ref=e110]: 📈
+              - generic [ref=e111]:
+                - generic [ref=e112]: FPGA DAC
+                - generic [ref=e113]: FPGA 数模转换器
+            - generic [ref=e114]:
+              - generic [ref=e115]: 〰️
+              - generic [ref=e116]:
+                - generic [ref=e117]: FPGA PWM
+                - generic [ref=e118]: FPGA PWM 信号生成
+            - generic [ref=e119]:
+              - generic [ref=e120]: ⚡
+              - generic [ref=e121]:
+                - generic [ref=e122]: FPGA DMA
+                - generic [ref=e123]: FPGA 高速 DMA 传输
+        - generic [ref=e124]:
+          - generic [ref=e125] [cursor=pointer]:
+            - generic [ref=e126]: Communication
+            - generic [ref=e127]: ▼
+          - generic [ref=e128]:
+            - generic [ref=e129]:
+              - generic [ref=e130]: 📡
+              - generic [ref=e131]:
+                - generic [ref=e132]: MQTT Subscribe
+                - generic [ref=e133]: Subscribe to MQTT topic
+            - generic [ref=e134]:
+              - generic [ref=e135]: 📤
+              - generic [ref=e136]:
+                - generic [ref=e137]: MQTT Publish
+                - generic [ref=e138]: Publish to MQTT topic
+        - generic [ref=e139]:
+          - generic [ref=e140] [cursor=pointer]:
+            - generic [ref=e141]: Logic
+            - generic [ref=e142]: ▼
+          - generic [ref=e143]:
+            - generic [ref=e144]:
+              - generic [ref=e145]: 🔢
+              - generic [ref=e146]:
+                - generic [ref=e147]: Math Operation
+                - generic [ref=e148]: Mathematical operations
+            - generic [ref=e149]:
+              - generic [ref=e150]: ⚖️
+              - generic [ref=e151]:
+                - generic [ref=e152]: Compare
+                - generic [ref=e153]: Compare values
+            - generic [ref=e154]:
+              - generic [ref=e155]: 🧩
+              - generic [ref=e156]:
+                - generic [ref=e157]: Custom Script
+                - generic [ref=e158]: User-defined logic with Blockly
+            - generic [ref=e159]:
+              - generic [ref=e160]: 🚨
+              - generic [ref=e161]:
+                - generic [ref=e162]: Threshold Alarm
+                - generic [ref=e163]: Trigger alarm when value exceeds threshold
+            - generic [ref=e164]:
+              - generic [ref=e165]: 🐛
+              - generic [ref=e166]:
+                - generic [ref=e167]: Debug Print
+                - generic [ref=e168]: Print values to console for debugging
+            - generic [ref=e169]:
+              - generic [ref=e170]: 📦
+              - generic [ref=e171]:
+                - generic [ref=e172]: Global Variable
+                - generic [ref=e173]: Read/Write global variables
+            - generic [ref=e174]:
+              - generic [ref=e175]: ⏱️
+              - generic [ref=e176]:
+                - generic [ref=e177]: Timer
+                - generic [ref=e178]: Periodic trigger signal generator
+            - generic [ref=e179]:
+              - generic [ref=e180]: 🔢
+              - generic [ref=e181]:
+                - generic [ref=e182]: Counter
+                - generic [ref=e183]: Increment/decrement counter
+            - generic [ref=e184]:
+              - generic [ref=e185]: 🔄
+              - generic [ref=e186]:
+                - generic [ref=e187]: While Loop
+                - generic [ref=e188]: Periodic loop control
+            - generic [ref=e189]:
+              - generic [ref=e190]: 🔀
+              - generic [ref=e191]:
+                - generic [ref=e192]: Conditional
+                - generic [ref=e193]: If-else conditional branching
+            - generic [ref=e194]:
+              - generic [ref=e195]: 🔍
+              - generic [ref=e196]:
+                - generic [ref=e197]: Data Probe
+                - generic [ref=e198]: Monitor data flow in real-time
+        - generic [ref=e199]:
+          - generic [ref=e200] [cursor=pointer]:
+            - generic [ref=e201]: Storage
+            - generic [ref=e202]: ▼
+          - generic [ref=e203]:
+            - generic [ref=e204]:
+              - generic [ref=e205]: 📁
+              - generic [ref=e206]:
+                - generic [ref=e207]: CSV Storage
+                - generic [ref=e208]: Save data to CSV file
+            - generic [ref=e209]:
+              - generic [ref=e210]: 🔴
+              - generic [ref=e211]:
+                - generic [ref=e212]: Redis Cache
+                - generic [ref=e213]: Store and retrieve data from Redis cache
+            - generic [ref=e214]:
+              - generic [ref=e215]: 💾
+              - generic [ref=e216]:
+                - generic [ref=e217]: SQLite Storage
+                - generic [ref=e218]: Store data to local SQLite database
+            - generic [ref=e219]:
+              - generic [ref=e220]: 📊
+              - generic [ref=e221]:
+                - generic [ref=e222]: InfluxDB
+                - generic [ref=e223]: Store time-series data to InfluxDB
+            - generic [ref=e224]:
+              - generic [ref=e225]: ⏱️
+              - generic [ref=e226]:
+                - generic [ref=e227]: TimescaleDB
+                - generic [ref=e228]: Store time-series data to TimescaleDB (PostgreSQL)
+    - generic [ref=e229]:
+      - generic [ref=e230]:
+        - button "💾 Export Project" [ref=e231] [cursor=pointer]
+        - button "📂 Import Project" [ref=e232] [cursor=pointer]
+        - button "⚙️ Compile" [ref=e233] [cursor=pointer]
+        - button "📊 Demo Data Flow" [ref=e234] [cursor=pointer]
+        - button "📥 Download CSV" [ref=e235] [cursor=pointer]
+        - button "🗑️ Delete" [ref=e237] [cursor=pointer]
+        - generic [ref=e239]: Drag components from the left panel onto the canvas
+      - application [ref=e241]:
+        - generic [ref=e243]:
+          - generic:
+            - generic:
+              - img:
+                - group "Edge from 452fb7f3-47fe-4ddd-a4d3-aa39aa96d873 to 1725ed30-1bfd-46eb-b736-67b5243f4d6b" [ref=e244] [cursor=pointer]
+              - img:
+                - group "Edge from 1725ed30-1bfd-46eb-b736-67b5243f4d6b to 6065967f-9e49-4cf5-be1b-2887c8a0eeb0" [ref=e247] [cursor=pointer]
+            - generic:
+              - group [ref=e250]:
+                - generic [ref=e251]:
+                  - generic [ref=e252]:
+                    - generic [ref=e253]: 🎲
+                    - generic [ref=e254]:
+                      - generic [ref=e255]: Mock Device
+                      - generic [ref=e256]: mock_device
+                  - generic [ref=e259]:
+                    - generic [ref=e261]: Value
+                    - generic [ref=e264]: Data
+              - group [ref=e266]:
+                - generic [ref=e267]:
+                  - generic [ref=e268]:
+                    - generic [ref=e269]: 🔢
+                    - generic [ref=e270]:
+                      - generic [ref=e271]: Math Operation
+                      - generic [ref=e272]: math
+                  - generic [ref=e274]:
+                    - generic [ref=e275]:
+                      - generic [ref=e278]: Input 1
+                      - generic [ref=e281]: Input 2
+                    - generic [ref=e282]:
+                      - generic [ref=e284]: Result
+                      - generic [ref=e287]: Exceeded
+              - group [ref=e289]:
+                - generic [ref=e290]:
+                  - generic [ref=e291]:
+                    - generic [ref=e292]: ⚖️
+                    - generic [ref=e293]:
+                      - generic [ref=e294]: Compare
+                      - generic [ref=e295]: compare
+                  - generic [ref=e297]:
+                    - generic [ref=e298]:
+                      - generic [ref=e301]: Input 1
+                      - generic [ref=e304]: Input 2
+                    - generic [ref=e305]:
+                      - generic [ref=e307]: Result
+                      - generic [ref=e310]: Difference
+              - group [ref=e312]:
+                - generic [ref=e313]:
+                  - generic [ref=e314]:
+                    - generic [ref=e315]: 📤
+                    - generic [ref=e316]:
+                      - generic [ref=e317]: MQTT Publish
+                      - generic [ref=e318]: mqtt_publish
+                  - generic [ref=e320]:
+                    - generic [ref=e324]: Data
+                    - generic [ref=e327]: Success
+              - group [ref=e329]:
+                - generic [ref=e330]:
+                  - generic [ref=e331]:
+                    - generic [ref=e332]: 📡
+                    - generic [ref=e333]:
+                      - generic [ref=e334]: MQTT Subscribe
+                      - generic [ref=e335]: mqtt_subscribe
+                  - generic [ref=e338]:
+                    - generic [ref=e340]: Data
+                    - generic [ref=e343]: Topic
+              - group [ref=e345]:
+                - generic [ref=e346]:
+                  - generic [ref=e347]:
+                    - generic [ref=e348]: 📁
+                    - generic [ref=e349]:
+                      - generic [ref=e350]: CSV Storage
+                      - generic [ref=e351]: csv_storage
+                  - generic [ref=e353]:
+                    - generic [ref=e354]:
+                      - generic [ref=e357]: Data
+                      - generic [ref=e360]: Value
+                      - generic [ref=e363]: Enable
+                    - generic [ref=e364]:
+                      - generic [ref=e366]: Row Count
+                      - generic [ref=e369]: Success
+        - img
+        - generic "Control Panel" [ref=e371]:
+          - button "Zoom In" [ref=e372] [cursor=pointer]:
+            - img [ref=e373]
+          - button "Zoom Out" [ref=e375] [cursor=pointer]:
+            - img [ref=e376]
+          - button "Fit View" [ref=e378] [cursor=pointer]:
+            - img [ref=e379]
+          - button "Toggle Interactivity" [ref=e381] [cursor=pointer]:
+            - img [ref=e382]
+        - img "Mini Map" [ref=e385]
+        - link "React Flow attribution" [ref=e393] [cursor=pointer]:
+          - /url: https://reactflow.dev
+          - text: React Flow
+    - generic [ref=e395]:
+      - heading "🎲 Mock Device" [level=3] [ref=e397]
+      - generic [ref=e398]:
+        - generic [ref=e399]:
+          - generic [ref=e400]: Node Info
+          - generic [ref=e401]:
+            - generic [ref=e402]: ID
+            - textbox [ref=e403]: 67add7c4-6afd-4c1d-a7ee-bd249eacf0ce
+          - generic [ref=e404]:
+            - generic [ref=e405]: Type
+            - textbox [ref=e406]: mock_device
+        - generic [ref=e407]:
+          - generic [ref=e408]: Configuration
+          - generic [ref=e409]:
+            - generic [ref=e410]: Device Name
+            - textbox [ref=e411]: Sensor01
+          - generic [ref=e412]:
+            - generic [ref=e413]: Broker Host
+            - textbox [ref=e414]: localhost
+          - generic [ref=e415]:
+            - generic [ref=e416]: Broker Port
+            - spinbutton [ref=e417]: "1883"
+          - generic [ref=e418]:
+            - generic [ref=e419]: Topic
+            - textbox [ref=e420]: accudaq/demo/sensor
+          - generic [ref=e421]:
+            - generic [ref=e422]: Wave Type
+            - combobox [ref=e423]:
+              - option "Sine Wave" [selected]
+              - option "Square Wave"
+              - option "Random"
+          - generic [ref=e424]:
+            - generic [ref=e425]: Amplitude
+            - spinbutton [ref=e426]: "10"
+          - generic [ref=e427]:
+            - generic [ref=e428]: Offset
+            - spinbutton [ref=e429]: "25"
+          - generic [ref=e430]:
+            - generic [ref=e431]: Frequency
+            - spinbutton [ref=e432]: "0.1"
+          - generic [ref=e433]:
+            - generic [ref=e434]: Interval (ms)
+            - spinbutton [ref=e435]: "1000"
+        - generic [ref=e436]:
+          - generic [ref=e437]: Ports
+          - generic [ref=e438]:
+            - generic [ref=e439]: Inputs
+            - generic [ref=e440]: None
+          - generic [ref=e441]:
+            - generic [ref=e442]: Outputs
+            - generic [ref=e443]: Value, Data
+```

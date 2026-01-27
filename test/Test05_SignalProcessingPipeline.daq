@@ -1,0 +1,184 @@
+{
+    "_comment": "\u6d4b\u8bd55: \u4fe1\u53f7\u5904\u7406\u6d41\u6c34\u7ebf - \u6ee4\u6ce2\u5668\u548cFFT\u9891\u8c31\u5206\u6790",
+    "meta": {
+        "name": "Test05_SignalProcessingPipeline",
+        "version": "1.0.0",
+        "schemaVersion": "0.1.0",
+        "description": "\u6d4b\u8bd5\u4fe1\u53f7\u5904\u7406\u7ec4\u4ef6\uff1a\u539f\u59cb\u4fe1\u53f7\u7ecf\u8fc7\u79fb\u52a8\u5e73\u5747\u6ee4\u6ce2\u3001\u4f4e\u901a\u6ee4\u6ce2\uff0c\u7136\u540e\u8fdb\u884cFFT\u9891\u8c31\u5206\u6790"
+    },
+    "devices": [],
+    "logic": {
+        "nodes": [
+            {
+                "id": "signal-gen",
+                "type": "daq:mock_device",
+                "label": "Vibration Sensor",
+                "position": {
+                    "x": 100,
+                    "y": 200
+                },
+                "properties": {
+                    "device_name": "VibrationSensor01",
+                    "wave_type": "sine",
+                    "amplitude": 5,
+                    "offset": 0,
+                    "frequency": 10,
+                    "interval_ms": 10,
+                    "broker_host": "localhost",
+                    "broker_port": 1883,
+                    "topic": "test/vibration"
+                }
+            },
+            {
+                "id": "moving-avg",
+                "type": "daq:moving_average_filter",
+                "label": "Moving Average",
+                "position": {
+                    "x": 350,
+                    "y": 100
+                },
+                "properties": {
+                    "window_size": 10
+                }
+            },
+            {
+                "id": "low-pass",
+                "type": "daq:low_pass_filter",
+                "label": "Low Pass Filter",
+                "position": {
+                    "x": 350,
+                    "y": 300
+                },
+                "properties": {
+                    "cutoff_frequency": 50,
+                    "sample_rate": 1000
+                }
+            },
+            {
+                "id": "fft-analysis",
+                "type": "daq:fft",
+                "label": "FFT Spectrum",
+                "position": {
+                    "x": 600,
+                    "y": 200
+                },
+                "properties": {
+                    "window_size": 256,
+                    "sample_rate": 1000
+                }
+            },
+            {
+                "id": "debug-freq",
+                "type": "daq:debug_print",
+                "label": "Frequency Debug",
+                "position": {
+                    "x": 850,
+                    "y": 200
+                },
+                "properties": {
+                    "prefix": "DOMINANT_FREQ",
+                    "format": "simple"
+                }
+            },
+            {
+                "id": "csv-spectrum",
+                "type": "daq:csv_storage",
+                "label": "Spectrum Log",
+                "position": {
+                    "x": 850,
+                    "y": 350
+                },
+                "properties": {
+                    "file_path": "./data/test05_spectrum.csv",
+                    "append_mode": true,
+                    "include_timestamp": true,
+                    "flush_interval": 20
+                }
+            },
+            {
+                "id": "66e42ea5-525e-4241-b702-57da713b5756",
+                "type": "daq:data_probe",
+                "label": "Probe-Vibration Sensor",
+                "position": {
+                    "x": 225.0,
+                    "y": 150.0
+                },
+                "properties": {
+                    "label": "Probe-Vibration Sensor",
+                    "probe_id": "66e42ea5-525e-4241-b702-57da713b5756"
+                }
+            }
+        ],
+        "wires": [
+            {
+                "id": "wire-sig-to-lp",
+                "source": {
+                    "nodeId": "signal-gen",
+                    "portId": "value"
+                },
+                "target": {
+                    "nodeId": "low-pass",
+                    "portId": "input"
+                }
+            },
+            {
+                "id": "wire-ma-to-fft",
+                "source": {
+                    "nodeId": "moving-avg",
+                    "portId": "output"
+                },
+                "target": {
+                    "nodeId": "fft-analysis",
+                    "portId": "signal"
+                }
+            },
+            {
+                "id": "wire-fft-to-debug",
+                "source": {
+                    "nodeId": "fft-analysis",
+                    "portId": "dominant_freq"
+                },
+                "target": {
+                    "nodeId": "debug-freq",
+                    "portId": "value"
+                }
+            },
+            {
+                "id": "wire-fft-to-csv",
+                "source": {
+                    "nodeId": "fft-analysis",
+                    "portId": "magnitudes"
+                },
+                "target": {
+                    "nodeId": "csv-spectrum",
+                    "portId": "data"
+                }
+            },
+            {
+                "id": "52830c0e-458d-4c47-99d5-2b6137de7db6",
+                "source": {
+                    "nodeId": "signal-gen",
+                    "portId": "value"
+                },
+                "target": {
+                    "nodeId": "66e42ea5-525e-4241-b702-57da713b5756",
+                    "portId": "input"
+                }
+            },
+            {
+                "id": "ed973741-de24-466c-b817-bfd9b7f72d90",
+                "source": {
+                    "nodeId": "66e42ea5-525e-4241-b702-57da713b5756",
+                    "portId": "output"
+                },
+                "target": {
+                    "nodeId": "moving-avg",
+                    "portId": "input"
+                }
+            }
+        ]
+    },
+    "ui": {
+        "widgets": []
+    }
+}

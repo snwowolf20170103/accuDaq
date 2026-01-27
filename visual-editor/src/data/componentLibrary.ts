@@ -1648,6 +1648,26 @@ export const componentLibrary: ComponentDefinition[] = [
             { key: 'auto_reset', label: 'Auto Reset', type: 'boolean' },
         ]
     },
+    // Data Probe - for real-time data visualization
+    {
+        type: 'data_probe',
+        name: 'Data Probe',
+        category: 'logic',
+        icon: '🔍',
+        description: 'Monitor data flow in real-time',
+        inputs: [
+            { id: 'input', name: 'Input', type: 'any' },
+        ],
+        outputs: [
+            { id: 'output', name: 'Output', type: 'any' },
+        ],
+        defaultProperties: {
+            label: 'Probe',
+        },
+        propertySchema: [
+            { key: 'label', label: 'Label', type: 'string' },
+        ]
+    },
 ]
 
 export default componentLibrary

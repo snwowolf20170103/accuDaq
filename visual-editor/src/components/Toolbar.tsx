@@ -7,9 +7,11 @@ interface ToolbarProps {
     isRunning: boolean
     onToggleRun: () => void
     csvPath?: string
+    onDemoMode?: () => void
+    isDemoMode?: boolean
 }
 
-const Toolbar = ({ onExport, onImport, onCompile, onDelete, hasSelection, csvPath }: ToolbarProps) => {
+const Toolbar = ({ onExport, onImport, onCompile, onDelete, hasSelection, csvPath, onDemoMode, isDemoMode }: ToolbarProps) => {
     return (
         <div className="canvas-toolbar">
             <button className="toolbar-btn primary" onClick={onExport}>
@@ -24,6 +26,20 @@ const Toolbar = ({ onExport, onImport, onCompile, onDelete, hasSelection, csvPat
                 ⚙️ Compile
             </button>
 
+            {onDemoMode && (
+                <button
+                    className="toolbar-btn"
+                    onClick={onDemoMode}
+                    style={{
+                        background: isDemoMode ? '#22c55e' : '#6366f1',
+                        marginLeft: 10,
+                        animation: isDemoMode ? 'none' : 'pulse 2s infinite'
+                    }}
+                >
+                    {isDemoMode ? '⏹️ Stop Demo' : '📊 Demo Data Flow'}
+                </button>
+            )}
+
             <button
                 className="toolbar-btn"
                 onClick={async () => {
@@ -34,11 +50,25 @@ const Toolbar = ({ onExport, onImport, onCompile, onDelete, hasSelection, csvPat
 
                         const blob = await response.blob();
 
+                        // Extract filename from Content-Disposition header or use csvPath
+                        let filename = 'mqtt_data.csv';
+                        const contentDisposition = response.headers.get('Content-Disposition');
+                        if (contentDisposition) {
+                            const filenameMatch = contentDisposition.match(/filename=(.+)/);
+                            if (filenameMatch && filenameMatch[1]) {
+                                filename = filenameMatch[1].replace(/['"]/g, '');
+                            }
+                        } else if (csvPath) {
+                            // Extract filename from csvPath
+                            const parts = csvPath.split('/');
+                            filename = parts[parts.length - 1];
+                        }
+
                         // Try to use the File System Access API if supported
                         if ('showSaveFilePicker' in window) {
                             try {
                                 const handle = await (window as any).showSaveFilePicker({
-                                    suggestedName: 'mqtt_data.csv',
+                                    suggestedName: filename,
                                     types: [{
                                         description: 'CSV File',
                                         accept: { 'text/csv': ['.csv'] },
@@ -62,7 +92,7 @@ const Toolbar = ({ onExport, onImport, onCompile, onDelete, hasSelection, csvPat
                         const url = window.URL.createObjectURL(blob);
                         const a = document.createElement('a');
                         a.href = url;
-                        a.download = 'mqtt_data.csv';
+                        a.download = filename;
                         document.body.appendChild(a);
                         a.click();
                         window.URL.revokeObjectURL(url);

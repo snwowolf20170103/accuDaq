@@ -1,0 +1,170 @@
+{
+    "_comment": "\u6d4b\u8bd54: \u591a\u6570\u636e\u5e93\u5b58\u50a8 - \u540c\u65f6\u5199\u5165CSV\u3001SQLite\u548cRedis",
+    "meta": {
+        "name": "Test04_MultiDatabaseStorage",
+        "version": "1.0.0",
+        "schemaVersion": "0.1.0",
+        "description": "\u6d4b\u8bd5\u591a\u79cd\u5b58\u50a8\u7ec4\u4ef6\uff1a\u540c\u4e00\u6570\u636e\u6e90\u540c\u65f6\u5199\u5165CSV\u6587\u4ef6\u3001SQLite\u6570\u636e\u5e93\u548cRedis\u7f13\u5b58"
+    },
+    "devices": [],
+    "logic": {
+        "nodes": [
+            {
+                "id": "data-source",
+                "type": "daq:mock_device",
+                "label": "Multi-Output Sensor",
+                "position": {
+                    "x": 100,
+                    "y": 250
+                },
+                "properties": {
+                    "device_name": "MultiSensor01",
+                    "wave_type": "random",
+                    "amplitude": 100,
+                    "offset": 0,
+                    "frequency": 0.1,
+                    "interval_ms": 1000,
+                    "broker_host": "localhost",
+                    "broker_port": 1883,
+                    "topic": "test/multi/sensor"
+                }
+            },
+            {
+                "id": "csv-store",
+                "type": "daq:csv_storage",
+                "label": "CSV Storage",
+                "position": {
+                    "x": 450,
+                    "y": 100
+                },
+                "properties": {
+                    "file_path": "./data/test04_multi_csv.csv",
+                    "append_mode": true,
+                    "include_timestamp": true,
+                    "flush_interval": 5
+                }
+            },
+            {
+                "id": "sqlite-store",
+                "type": "daq:sqlite_storage",
+                "label": "SQLite Storage",
+                "position": {
+                    "x": 450,
+                    "y": 250
+                },
+                "properties": {
+                    "database_path": "./data/test04_multi.db",
+                    "table_name": "sensor_readings",
+                    "auto_create_table": true,
+                    "include_timestamp": true,
+                    "batch_size": 50,
+                    "flush_interval_ms": 5000
+                }
+            },
+            {
+                "id": "redis-cache",
+                "type": "daq:redis_cache",
+                "label": "Redis Cache",
+                "position": {
+                    "x": 450,
+                    "y": 400
+                },
+                "properties": {
+                    "host": "localhost",
+                    "port": 6379,
+                    "password": "",
+                    "db": 0,
+                    "key_prefix": "test04:",
+                    "default_ttl": 3600,
+                    "auto_reconnect": true
+                }
+            },
+            {
+                "id": "debug-all",
+                "type": "daq:debug_print",
+                "label": "Debug Monitor",
+                "position": {
+                    "x": 750,
+                    "y": 250
+                },
+                "properties": {
+                    "prefix": "MULTI_STORE",
+                    "format": "json"
+                }
+            },
+            {
+                "id": "85b1e71e-17ef-4408-9e0a-9293f04524d3",
+                "type": "daq:data_probe",
+                "label": "Probe-Multi-Output Sensor",
+                "position": {
+                    "x": 275.0,
+                    "y": 175.0
+                },
+                "properties": {
+                    "label": "Probe-Multi-Output Sensor",
+                    "probe_id": "85b1e71e-17ef-4408-9e0a-9293f04524d3"
+                }
+            }
+        ],
+        "wires": [
+            {
+                "id": "wire-to-sqlite",
+                "source": {
+                    "nodeId": "data-source",
+                    "portId": "data"
+                },
+                "target": {
+                    "nodeId": "sqlite-store",
+                    "portId": "data"
+                }
+            },
+            {
+                "id": "wire-to-redis",
+                "source": {
+                    "nodeId": "data-source",
+                    "portId": "data"
+                },
+                "target": {
+                    "nodeId": "redis-cache",
+                    "portId": "data"
+                }
+            },
+            {
+                "id": "wire-to-debug",
+                "source": {
+                    "nodeId": "data-source",
+                    "portId": "value"
+                },
+                "target": {
+                    "nodeId": "debug-all",
+                    "portId": "value"
+                }
+            },
+            {
+                "id": "8f63e822-9b5f-4f01-b406-0419b7443d11",
+                "source": {
+                    "nodeId": "data-source",
+                    "portId": "data"
+                },
+                "target": {
+                    "nodeId": "85b1e71e-17ef-4408-9e0a-9293f04524d3",
+                    "portId": "input"
+                }
+            },
+            {
+                "id": "1704939c-e0ca-4d8b-8bc7-b49d93aa3314",
+                "source": {
+                    "nodeId": "85b1e71e-17ef-4408-9e0a-9293f04524d3",
+                    "portId": "output"
+                },
+                "target": {
+                    "nodeId": "csv-store",
+                    "portId": "data"
+                }
+            }
+        ]
+    },
+    "ui": {
+        "widgets": []
+    }
+}

@@ -1,0 +1,176 @@
+{
+    "_comment": "\u6d4b\u8bd52: MQTT\u901a\u4fe1\u95ed\u73af - \u53d1\u5e03\u8ba2\u9605\u6d4b\u8bd5\uff0c\u9a8c\u8bc1MQTT\u7ec4\u4ef6\u7684\u6b63\u786e\u8fde\u63a5",
+    "meta": {
+        "name": "Test02_MQTTLoopback",
+        "version": "1.0.0",
+        "schemaVersion": "0.1.0",
+        "description": "\u6d4b\u8bd5MQTT\u53d1\u5e03\u548c\u8ba2\u9605\u7684\u95ed\u73af\u901a\u4fe1\uff1aMock\u8bbe\u5907\u53d1\u9001\u6570\u636e\u5230MQTT Broker\uff0c\u7136\u540e\u901a\u8fc7\u8ba2\u9605\u63a5\u6536\u5e76\u5b58\u50a8"
+    },
+    "devices": [],
+    "logic": {
+        "nodes": [
+            {
+                "id": "mock-producer",
+                "type": "daq:mock_device",
+                "label": "Data Producer",
+                "position": {
+                    "x": 100,
+                    "y": 100
+                },
+                "properties": {
+                    "device_name": "Producer01",
+                    "wave_type": "square",
+                    "amplitude": 50,
+                    "offset": 50,
+                    "frequency": 0.2,
+                    "interval_ms": 1000,
+                    "broker_host": "localhost",
+                    "broker_port": 1883,
+                    "topic": "test/loopback/data"
+                }
+            },
+            {
+                "id": "mqtt-pub-01",
+                "type": "daq:mqtt_publish",
+                "label": "MQTT Publisher",
+                "position": {
+                    "x": 400,
+                    "y": 100
+                },
+                "properties": {
+                    "broker_host": "localhost",
+                    "broker_port": 1883,
+                    "topic": "test/loopback/channel"
+                }
+            },
+            {
+                "id": "mqtt-sub-01",
+                "type": "daq:mqtt_subscribe",
+                "label": "MQTT Subscriber",
+                "position": {
+                    "x": 400,
+                    "y": 300
+                },
+                "properties": {
+                    "broker_host": "localhost",
+                    "broker_port": 1883,
+                    "topic": "test/loopback/channel"
+                }
+            },
+            {
+                "id": "debug-print-01",
+                "type": "daq:debug_print",
+                "label": "Debug Output",
+                "position": {
+                    "x": 700,
+                    "y": 300
+                },
+                "properties": {
+                    "prefix": "MQTT_RECEIVED",
+                    "format": "json"
+                }
+            },
+            {
+                "id": "csv-loopback",
+                "type": "daq:csv_storage",
+                "label": "Loopback Log",
+                "position": {
+                    "x": 700,
+                    "y": 100
+                },
+                "properties": {
+                    "file_path": "./data/test02_mqtt_loopback.csv",
+                    "append_mode": true,
+                    "include_timestamp": true,
+                    "flush_interval": 10
+                }
+            },
+            {
+                "id": "f442a053-a5dc-4ab6-a490-b6f62572f544",
+                "type": "daq:data_probe",
+                "label": "Probe-Data Producer",
+                "position": {
+                    "x": 250.0,
+                    "y": 100.0
+                },
+                "properties": {
+                    "label": "Probe-Data Producer",
+                    "probe_id": "f442a053-a5dc-4ab6-a490-b6f62572f544"
+                }
+            },
+            {
+                "id": "40700c0a-c9cf-4f7c-9b69-f59b063a6c61",
+                "type": "daq:data_probe",
+                "label": "DebugProbe",
+                "position": {
+                    "x": 550.0,
+                    "y": 300.0
+                },
+                "properties": {
+                    "label": "DebugProbe",
+                    "probe_id": "40700c0a-c9cf-4f7c-9b69-f59b063a6c61"
+                }
+            }
+        ],
+        "wires": [
+            {
+                "id": "wire-sub-to-csv",
+                "source": {
+                    "nodeId": "mqtt-sub-01",
+                    "portId": "data"
+                },
+                "target": {
+                    "nodeId": "csv-loopback",
+                    "portId": "data"
+                }
+            },
+            {
+                "id": "191adb80-9fa2-4447-956e-1b12e0259e1e",
+                "source": {
+                    "nodeId": "mock-producer",
+                    "portId": "value"
+                },
+                "target": {
+                    "nodeId": "f442a053-a5dc-4ab6-a490-b6f62572f544",
+                    "portId": "input"
+                }
+            },
+            {
+                "id": "91d66ce4-cf69-4449-9264-3d12d1cfd169",
+                "source": {
+                    "nodeId": "f442a053-a5dc-4ab6-a490-b6f62572f544",
+                    "portId": "output"
+                },
+                "target": {
+                    "nodeId": "mqtt-pub-01",
+                    "portId": "data"
+                }
+            },
+            {
+                "id": "ff2f9286-01f1-49e0-bce1-a714d5d44e9b",
+                "source": {
+                    "nodeId": "mqtt-sub-01",
+                    "portId": "data"
+                },
+                "target": {
+                    "nodeId": "40700c0a-c9cf-4f7c-9b69-f59b063a6c61",
+                    "portId": "input"
+                }
+            },
+            {
+                "id": "70520f25-6037-4bab-bd95-f246fe785b65",
+                "source": {
+                    "nodeId": "40700c0a-c9cf-4f7c-9b69-f59b063a6c61",
+                    "portId": "output"
+                },
+                "target": {
+                    "nodeId": "debug-print-01",
+                    "portId": "value"
+                }
+            }
+        ]
+    },
+    "ui": {
+        "widgets": []
+    }
+}

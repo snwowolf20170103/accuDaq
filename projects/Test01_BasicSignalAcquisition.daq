@@ -1,0 +1,91 @@
+{
+  "_comment": "测试1: 基础信号采集流程 - Mock Device -> Math -> CSV 存储",
+  "meta": {
+    "name": "Test01_BasicSignalAcquisition",
+    "version": "1.0.0",
+    "schemaVersion": "0.1.0",
+    "description": "测试基础信号采集流程：模拟设备产生正弦波信号，经过数学运算缩放后存储到CSV文件"
+  },
+  "devices": [],
+  "logic": {
+    "nodes": [
+      {
+        "id": "mock-sensor-01",
+        "type": "daq:mock_device",
+        "label": "Temperature Sensor",
+        "position": {
+          "x": 100,
+          "y": 150
+        },
+        "properties": {
+          "device_name": "TempSensor01",
+          "wave_type": "sine",
+          "amplitude": 15,
+          "offset": 25,
+          "frequency": 0.05,
+          "interval_ms": 500,
+          "broker_host": "localhost",
+          "broker_port": 1883,
+          "topic": "test/sensor/temp"
+        }
+      },
+      {
+        "id": "math-scale-01",
+        "type": "daq:math",
+        "label": "Celsius to Fahrenheit",
+        "position": {
+          "x": 400,
+          "y": 150
+        },
+        "properties": {
+          "operation": "scale",
+          "scale": 1.8,
+          "offset": 32,
+          "threshold": 100
+        }
+      },
+      {
+        "id": "csv-output-01",
+        "type": "daq:csv_storage",
+        "label": "Temperature Log",
+        "position": {
+          "x": 700,
+          "y": 150
+        },
+        "properties": {
+          "file_path": "./data/test01_temperature.csv",
+          "append_mode": true,
+          "include_timestamp": true,
+          "flush_interval": 5
+        }
+      }
+    ],
+    "wires": [
+      {
+        "id": "wire-mock-to-math",
+        "source": {
+          "nodeId": "mock-sensor-01",
+          "portId": "value"
+        },
+        "target": {
+          "nodeId": "math-scale-01",
+          "portId": "input1"
+        }
+      },
+      {
+        "id": "wire-math-to-csv",
+        "source": {
+          "nodeId": "math-scale-01",
+          "portId": "result"
+        },
+        "target": {
+          "nodeId": "csv-output-01",
+          "portId": "value"
+        }
+      }
+    ]
+  },
+  "ui": {
+    "widgets": []
+  }
+}

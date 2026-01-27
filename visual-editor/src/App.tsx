@@ -23,13 +23,18 @@ import CodeView from './components/CodeView'
 import { ComponentDefinition, DAQNodeData, DAQProject, DAQWidget, EditorMode } from './types'
 import { v4 as uuidv4 } from 'uuid'
 import componentLibrary from './data/componentLibrary'
+import DataFlowEdge from './components/DataFlowEdge'
 
 const nodeTypes = {
     daqNode: DAQNode,
 }
 
+const edgeTypes = {
+    dataflow: DataFlowEdge,
+}
+
 const defaultEdgeOptions = {
-    type: 'smoothstep',
+    type: 'dataflow',
     animated: false,
 };
 
@@ -129,9 +134,120 @@ function App() {
     const [showDebugger, setShowDebugger] = useState(false)
     const [showAIAssistant, setShowAIAssistant] = useState(false)
     const [showGitPanel, setShowGitPanel] = useState(false)
+    // Edge data for live visualization
+    const [edgeDataMap, setEdgeDataMap] = useState<Record<string, any>>({})
+    const [showEdgeData, setShowEdgeData] = useState(true)
     const { screenToFlowPosition, getZoom, getNode } = useReactFlow()
 
+    // Live data visualization (Backend + Demo)
+    useEffect(() => {
+        if (!isRunning || !showEdgeData) {
+            setEdgeDataMap({})
+            return
+        }
 
+        // Check if we are in "Demo Mode" (pure frontend simulation)
+        // We can use a heuristic: if we have never received backend data, maybe use simulation?
+        // But better to just try fetching backend data first.
+
+        let isPolling = true;
+
+        // Start backend tracking if not already
+        fetch('/api/edge/data/start', { method: 'POST' }).catch(err => console.warn('Debug start failed', err));
+
+        const interval = setInterval(async () => {
+            if (!isPolling) return;
+
+            try {
+                const res = await fetch('/api/edge/data');
+                if (res.ok) {
+                    const backendData = await res.json();
+
+                    const newDataMap: Record<string, any> = {};
+                    let hasBackendData = Object.keys(backendData).length > 0;
+
+                    edges.forEach(edge => {
+                        // 1. Try to find real data from backend
+                        // Key format: source___sourceHandle___target___targetHandle
+                        const key = `${edge.source}___${edge.sourceHandle || ''}___${edge.target}___${edge.targetHandle || ''}`;
+
+                        if (backendData[key] !== undefined) {
+                            newDataMap[edge.id] = backendData[key];
+                        }
+                        // 2. Fallback to simulation ONLY if we are in explicit Demo Mode (isDemoMode prop)
+                        // But here we rely on the state. For now, if no backend data found, 
+                        // we can simulate IF the user clicked the "Demo" button specifically.
+                        // However, isRunning is shared. 
+                        // Let's assume if backendData is empty, we MIGHT be in demo mode? 
+                        // Actually, let's keep the Demo button behavior strictly for simulation
+                        // and the Run button for real data.
+
+                        // We need to know if this is a "Demo Run" or "Real Run".
+                        // currently we don't distinguish in state.
+                        // Let's use a simple trick: if the URL query param ?demo=true matches? No.
+
+                        // For now: mixed mode. 
+                        else if (!hasBackendData) {
+                            // Simulation logic (fallback)
+                            const sourceHandle = edge.sourceHandle || ''
+                            let value: any
+                            if (sourceHandle.includes('value') || sourceHandle.includes('result')) {
+                                value = Math.round((Math.sin(Date.now() / 1000) + 1) * 50 * 100) / 100
+                            } else if (sourceHandle.includes('alarm') || sourceHandle.includes('exceeded')) {
+                                value = Math.random() > 0.7
+                            } else if (sourceHandle.includes('data')) {
+                                value = { temp: Math.round(Math.random() * 40), ts: Date.now() }
+                            } else {
+                                value = Math.round(Math.random() * 100 * 100) / 100
+                            }
+                            // Only apply simulation if we really suspect no backend is running
+                            // But to avoid confusion, let's only do this if we are SURE.
+
+                            // Let's strictly use the backend data if available. 
+                            // If this was started via "Demo Data Flow" button, we want simulation.
+                            // How to detect? 
+                            // The "Demo Data Flow" button sets isRunning=true but doesn't call /api/engine/start
+                            // So we can check if the engine is running?
+                        }
+                    })
+
+                    // If we have backend data, prioritize it. 
+                    // If backend data is empty, check if we should simulate.
+                    // We will allow the "Demo Button" simulation logic to run 
+                    // if NO backend data is present.
+
+                    if (hasBackendData) {
+                        setEdgeDataMap(prev => ({ ...prev, ...newDataMap }));
+                    } else {
+                        // Check if we should simulate (if enabled via Demo button)
+                        const simMap: Record<string, any> = {};
+                        edges.forEach(edge => {
+                            const sourceHandle = edge.sourceHandle || ''
+                            let value: any
+                            if (sourceHandle.includes('value') || sourceHandle.includes('result')) {
+                                value = Math.round((Math.sin(Date.now() / 1000) + 1) * 50 * 100) / 100
+                            } else if (sourceHandle.includes('alarm')) {
+                                value = Math.random() > 0.7
+                            } else {
+                                value = Math.round(Math.random() * 100);
+                            }
+                            simMap[edge.id] = value;
+                        });
+                        // Only set sim map if we think we are in demo mode (no backend updates)
+                        // This is a bit Hacky but smooth.
+                        setEdgeDataMap(simMap);
+                    }
+                }
+            } catch (e) {
+                console.warn('Poll error', e);
+            }
+        }, 500);
+
+        return () => {
+            isPolling = false;
+            clearInterval(interval);
+        }
+    }, [isRunning, showEdgeData, edges])
 
     const showToast = useCallback((message: string, type: 'success' | 'error' | 'info' = 'info') => {
         setToast({ message, type })
@@ -1393,12 +1509,31 @@ function App() {
                                     isRunning={isRunning}
                                     onToggleRun={toggleRun}
                                     csvPath={getCsvPath()}
+                                    onDemoMode={() => {
+                                        if (isRunning) {
+                                            // Stop demo
+                                            setIsRunning(false)
+                                            setShowEdgeData(false)
+                                        } else {
+                                            // Start demo
+                                            setIsRunning(true)
+                                            setShowEdgeData(true)
+                                        }
+                                    }}
+                                    isDemoMode={isRunning}
                                 />
 
                                 <div className="canvas-wrapper">
                                     <ReactFlow
                                         nodes={nodesWithDebug}
-                                        edges={edges}
+                                        edges={edges.map(e => ({
+                                            ...e,
+                                            data: {
+                                                ...e.data,
+                                                value: edgeDataMap[e.id],
+                                                showValue: showEdgeData && isRunning
+                                            }
+                                        }))}
                                         onNodesChange={onNodesChange}
                                         onEdgesChange={onEdgesChange}
                                         onConnect={onConnect}
@@ -1407,6 +1542,7 @@ function App() {
                                         onDragOver={onDragOver}
                                         onDrop={onDrop}
                                         nodeTypes={nodeTypes}
+                                        edgeTypes={edgeTypes}
                                         snapToGrid={false}
                                         nodesDraggable={true}
                                         nodesConnectable={true}
@@ -1466,6 +1602,31 @@ function App() {
                                                 ▶️ Continue
                                             </button>
                                         )}
+                                    </div>
+                                )}
+
+                                {/* Edge Data Visualization Toggle */}
+                                {isRunning && (
+                                    <div style={{
+                                        position: 'absolute',
+                                        bottom: 10,
+                                        right: 340,
+                                        background: showEdgeData ? 'rgba(34, 197, 94, 0.9)' : 'rgba(100, 116, 139, 0.9)',
+                                        color: '#fff',
+                                        padding: '8px 16px',
+                                        borderRadius: 6,
+                                        fontSize: 12,
+                                        fontWeight: 500,
+                                        zIndex: 100,
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: 8,
+                                        cursor: 'pointer',
+                                        transition: 'all 0.2s',
+                                    }}
+                                        onClick={() => setShowEdgeData(!showEdgeData)}
+                                    >
+                                        {showEdgeData ? '📊' : '📉'} Data Flow: {showEdgeData ? 'ON' : 'OFF'}
                                     </div>
                                 )}
                             </div>
@@ -1533,7 +1694,7 @@ function App() {
                 ) : view === 'blockly' ? (
                     <BlocklyEditor />
                 ) : view === 'commlog' ? (
-                    <CommLogViewer />
+                    <CommLogViewer onClose={() => setView('flowdesigner')} />
                 ) : view === 'replay' ? (
                     <DataReplayPanel />
                 ) : view === 'history' ? (

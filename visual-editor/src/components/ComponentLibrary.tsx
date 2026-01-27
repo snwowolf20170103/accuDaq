@@ -1,7 +1,23 @@
+import { useState } from 'react'
 import { ComponentDefinition } from '../types'
 import componentLibrary from '../data/componentLibrary'
 
 const ComponentLibrary = () => {
+    // State for collapsible categories
+    const [openCategories, setOpenCategories] = useState<Record<string, boolean>>({
+        'device': true,
+        'comm': false,
+        'logic': false,
+        'storage': false
+    })
+
+    const toggleCategory = (category: string) => {
+        setOpenCategories(prev => ({
+            ...prev,
+            [category]: !prev[category]
+        }))
+    }
+
     // Helper to create a custom drag ghost image
     const createDragGhost = (component: ComponentDefinition) => {
         const ghost = document.createElement('div')
@@ -63,10 +79,12 @@ const ComponentLibrary = () => {
         }, 0)
     }
 
-    const deviceComponents = componentLibrary.filter(c => c.category === 'device')
-    const commComponents = componentLibrary.filter(c => c.category === 'comm')
-    const logicComponents = componentLibrary.filter(c => c.category === 'logic')
-    const storageComponents = componentLibrary.filter(c => c.category === 'storage')
+    const categories = [
+        { id: 'device', title: 'Devices', items: componentLibrary.filter(c => c.category === 'device') },
+        { id: 'comm', title: 'Communication', items: componentLibrary.filter(c => c.category === 'comm') },
+        { id: 'logic', title: 'Logic', items: componentLibrary.filter(c => c.category === 'logic') },
+        { id: 'storage', title: 'Storage', items: componentLibrary.filter(c => c.category === 'storage') },
+    ]
 
     return (
         <div className="component-library">
@@ -75,85 +93,39 @@ const ComponentLibrary = () => {
             </div>
 
             <div className="library-content">
-                {deviceComponents.length > 0 && (
-                    <div className="component-category">
-                        <div className="category-title">Devices</div>
-                        {deviceComponents.map(component => (
-                            <div
-                                key={component.type}
-                                className="component-item component-device"
-                                draggable
-                                onDragStart={(e) => onDragStart(e, component)}
-                            >
-                                <div className="component-icon">{component.icon}</div>
-                                <div className="component-info">
-                                    <div className="component-name">{component.name}</div>
-                                    <div className="component-desc">{component.description}</div>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                )}
+                {categories.map(category => category.items.length > 0 && (
+                    <div key={category.id} className={`component-category ${openCategories[category.id] ? 'open' : ''}`}>
+                        <div
+                            className="category-title"
+                            onClick={() => toggleCategory(category.id)}
+                            style={{ cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+                        >
+                            <span>{category.title}</span>
+                            <span style={{ fontSize: '12px', transform: openCategories[category.id] ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}>
+                                ▼
+                            </span>
+                        </div>
 
-                {commComponents.length > 0 && (
-                    <div className="component-category">
-                        <div className="category-title">Communication</div>
-                        {commComponents.map(component => (
-                            <div
-                                key={component.type}
-                                className="component-item component-comm"
-                                draggable
-                                onDragStart={(e) => onDragStart(e, component)}
-                            >
-                                <div className="component-icon">{component.icon}</div>
-                                <div className="component-info">
-                                    <div className="component-name">{component.name}</div>
-                                    <div className="component-desc">{component.description}</div>
-                                </div>
+                        {openCategories[category.id] && (
+                            <div className="category-items">
+                                {category.items.map(component => (
+                                    <div
+                                        key={component.type}
+                                        className={`component-item component-${category.id}`}
+                                        draggable
+                                        onDragStart={(e) => onDragStart(e, component)}
+                                    >
+                                        <div className="component-icon">{component.icon}</div>
+                                        <div className="component-info">
+                                            <div className="component-name">{component.name}</div>
+                                            <div className="component-desc">{component.description}</div>
+                                        </div>
+                                    </div>
+                                ))}
                             </div>
-                        ))}
+                        )}
                     </div>
-                )}
-
-                {logicComponents.length > 0 && (
-                    <div className="component-category">
-                        <div className="category-title">Logic</div>
-                        {logicComponents.map(component => (
-                            <div
-                                key={component.type}
-                                className="component-item component-logic"
-                                draggable
-                                onDragStart={(e) => onDragStart(e, component)}
-                            >
-                                <div className="component-icon">{component.icon}</div>
-                                <div className="component-info">
-                                    <div className="component-name">{component.name}</div>
-                                    <div className="component-desc">{component.description}</div>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                )}
-
-                {storageComponents.length > 0 && (
-                    <div className="component-category">
-                        <div className="category-title">Storage</div>
-                        {storageComponents.map(component => (
-                            <div
-                                key={component.type}
-                                className="component-item component-storage"
-                                draggable
-                                onDragStart={(e) => onDragStart(e, component)}
-                            >
-                                <div className="component-icon">{component.icon}</div>
-                                <div className="component-info">
-                                    <div className="component-name">{component.name}</div>
-                                    <div className="component-desc">{component.description}</div>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                )}
+                ))}
             </div>
         </div>
     )

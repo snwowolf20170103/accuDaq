@@ -1,0 +1,197 @@
+{
+    "_comment": "\u6d4b\u8bd53: \u9608\u503c\u544a\u8b66\u7cfb\u7edf - \u591a\u7ea7\u9608\u503c\u5224\u65ad\u4e0e\u6761\u4ef6\u5206\u652f",
+    "meta": {
+        "name": "Test03_ThresholdAlarmSystem",
+        "version": "1.0.0",
+        "schemaVersion": "0.1.0",
+        "description": "\u6d4b\u8bd5\u9608\u503c\u544a\u8b66\u529f\u80fd\uff1a\u4f20\u611f\u5668\u6570\u636e\u7ecf\u8fc7Compare\u548cThreshold Alarm\u7ec4\u4ef6\u5224\u65ad\uff0c\u89e6\u53d1\u4e0d\u540c\u7ea7\u522b\u7684\u544a\u8b66\u8f93\u51fa"
+    },
+    "devices": [],
+    "logic": {
+        "nodes": [
+            {
+                "id": "sensor-input",
+                "type": "daq:mock_device",
+                "label": "Pressure Sensor",
+                "position": {
+                    "x": 100,
+                    "y": 200
+                },
+                "properties": {
+                    "device_name": "PressureSensor01",
+                    "wave_type": "sine",
+                    "amplitude": 40,
+                    "offset": 50,
+                    "frequency": 0.1,
+                    "interval_ms": 500,
+                    "broker_host": "localhost",
+                    "broker_port": 1883,
+                    "topic": "test/pressure"
+                }
+            },
+            {
+                "id": "alarm-high",
+                "type": "daq:threshold_alarm",
+                "label": "High Pressure Alarm",
+                "position": {
+                    "x": 400,
+                    "y": 100
+                },
+                "properties": {
+                    "threshold": 80,
+                    "compare_type": "greater"
+                }
+            },
+            {
+                "id": "alarm-low",
+                "type": "daq:threshold_alarm",
+                "label": "Low Pressure Alarm",
+                "position": {
+                    "x": 400,
+                    "y": 300
+                },
+                "properties": {
+                    "threshold": 20,
+                    "compare_type": "less"
+                }
+            },
+            {
+                "id": "compare-normal",
+                "type": "daq:compare",
+                "label": "Normal Range Check",
+                "position": {
+                    "x": 700,
+                    "y": 200
+                },
+                "properties": {
+                    "compare_type": "greater",
+                    "tolerance": 0.01
+                }
+            },
+            {
+                "id": "mqtt-alarm-pub",
+                "type": "daq:mqtt_publish",
+                "label": "Alarm Publisher",
+                "position": {
+                    "x": 1000,
+                    "y": 100
+                },
+                "properties": {
+                    "broker_host": "localhost",
+                    "broker_port": 1883,
+                    "topic": "test/alarms/pressure"
+                }
+            },
+            {
+                "id": "csv-alarm-log",
+                "type": "daq:csv_storage",
+                "label": "Alarm History",
+                "position": {
+                    "x": 1000,
+                    "y": 300
+                },
+                "properties": {
+                    "file_path": "./data/test03_alarm_history.csv",
+                    "append_mode": true,
+                    "include_timestamp": true,
+                    "flush_interval": 1
+                }
+            },
+            {
+                "id": "45681706-1e85-4940-888d-214ad08cbe9c",
+                "type": "daq:data_probe",
+                "label": "Probe-Pressure Sensor",
+                "position": {
+                    "x": 250.0,
+                    "y": 150.0
+                },
+                "properties": {
+                    "label": "Probe-Pressure Sensor",
+                    "probe_id": "45681706-1e85-4940-888d-214ad08cbe9c"
+                }
+            }
+        ],
+        "wires": [
+            {
+                "id": "wire-sensor-to-low",
+                "source": {
+                    "nodeId": "sensor-input",
+                    "portId": "value"
+                },
+                "target": {
+                    "nodeId": "alarm-low",
+                    "portId": "value"
+                }
+            },
+            {
+                "id": "wire-high-to-compare",
+                "source": {
+                    "nodeId": "alarm-high",
+                    "portId": "value_out"
+                },
+                "target": {
+                    "nodeId": "compare-normal",
+                    "portId": "input1"
+                }
+            },
+            {
+                "id": "wire-low-to-compare",
+                "source": {
+                    "nodeId": "alarm-low",
+                    "portId": "value_out"
+                },
+                "target": {
+                    "nodeId": "compare-normal",
+                    "portId": "input2"
+                }
+            },
+            {
+                "id": "wire-high-alarm-to-mqtt",
+                "source": {
+                    "nodeId": "alarm-high",
+                    "portId": "alarm"
+                },
+                "target": {
+                    "nodeId": "mqtt-alarm-pub",
+                    "portId": "data"
+                }
+            },
+            {
+                "id": "wire-sensor-to-csv",
+                "source": {
+                    "nodeId": "sensor-input",
+                    "portId": "data"
+                },
+                "target": {
+                    "nodeId": "csv-alarm-log",
+                    "portId": "data"
+                }
+            },
+            {
+                "id": "ab5169b9-c041-4c3d-a3a3-f8cb0131ed59",
+                "source": {
+                    "nodeId": "sensor-input",
+                    "portId": "value"
+                },
+                "target": {
+                    "nodeId": "45681706-1e85-4940-888d-214ad08cbe9c",
+                    "portId": "input"
+                }
+            },
+            {
+                "id": "4637afed-3c5b-43ea-803a-663156b048ce",
+                "source": {
+                    "nodeId": "45681706-1e85-4940-888d-214ad08cbe9c",
+                    "portId": "output"
+                },
+                "target": {
+                    "nodeId": "alarm-high",
+                    "portId": "value"
+                }
+            }
+        ]
+    },
+    "ui": {
+        "widgets": []
+    }
+}

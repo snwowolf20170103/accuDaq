@@ -1,0 +1,209 @@
+{
+    "_comment": "\u6d4b\u8bd57: \u5de5\u4e1a\u534f\u8bae\u8bbe\u5907\u901a\u4fe1 - Modbus TCP/RTU \u548c Serial Port \u6d4b\u8bd5",
+    "meta": {
+        "name": "Test07_IndustrialProtocols",
+        "version": "1.0.0",
+        "schemaVersion": "0.1.0",
+        "description": "\u6d4b\u8bd5\u5de5\u4e1a\u901a\u4fe1\u534f\u8bae\u7ec4\u4ef6\uff1aModbus TCP\u3001Modbus RTU\u3001Serial Port\u8bbe\u5907\u7684\u914d\u7f6e\u548c\u6570\u636e\u8bfb\u53d6"
+    },
+    "devices": [],
+    "logic": {
+        "nodes": [
+            {
+                "id": "modbus-tcp-plc",
+                "type": "daq:modbus_tcp",
+                "label": "PLC Modbus TCP",
+                "position": {
+                    "x": 100,
+                    "y": 100
+                },
+                "properties": {
+                    "host": "192.168.1.10",
+                    "port": 502,
+                    "register": 100,
+                    "count": 4,
+                    "slave_id": 1,
+                    "data_type": "float32"
+                }
+            },
+            {
+                "id": "modbus-rtu-sensor",
+                "type": "daq:modbus_rtu",
+                "label": "RTU Temperature",
+                "position": {
+                    "x": 100,
+                    "y": 300
+                },
+                "properties": {
+                    "port": "COM3",
+                    "baudrate": 9600,
+                    "parity": "N",
+                    "slave_id": 2,
+                    "register_address": 0,
+                    "register_count": 2,
+                    "register_type": "holding",
+                    "data_type": "int16",
+                    "poll_interval_ms": 1000,
+                    "auto_reconnect": true
+                }
+            },
+            {
+                "id": "serial-device",
+                "type": "daq:serial_port",
+                "label": "Serial Sensor",
+                "position": {
+                    "x": 100,
+                    "y": 500
+                },
+                "properties": {
+                    "port": "COM4",
+                    "baudrate": 115200,
+                    "bytesize": 8,
+                    "parity": "N",
+                    "stopbits": 1,
+                    "timeout": 0.5,
+                    "auto_reconnect": true,
+                    "data_format": "ascii"
+                }
+            },
+            {
+                "id": "math-convert",
+                "type": "daq:math",
+                "label": "Unit Conversion",
+                "position": {
+                    "x": 450,
+                    "y": 100
+                },
+                "properties": {
+                    "operation": "scale",
+                    "scale": 0.1,
+                    "offset": 0,
+                    "threshold": 1000
+                }
+            },
+            {
+                "id": "math-temp",
+                "type": "daq:math",
+                "label": "Temp Calibration",
+                "position": {
+                    "x": 450,
+                    "y": 300
+                },
+                "properties": {
+                    "operation": "scale",
+                    "scale": 0.01,
+                    "offset": -40,
+                    "threshold": 100
+                }
+            },
+            {
+                "id": "csv-industrial",
+                "type": "daq:csv_storage",
+                "label": "Industrial Data Log",
+                "position": {
+                    "x": 750,
+                    "y": 200
+                },
+                "properties": {
+                    "file_path": "./data/test07_industrial.csv",
+                    "append_mode": true,
+                    "include_timestamp": true,
+                    "flush_interval": 10
+                }
+            },
+            {
+                "id": "influxdb-store",
+                "type": "daq:influxdb_storage",
+                "label": "InfluxDB Metrics",
+                "position": {
+                    "x": 750,
+                    "y": 400
+                },
+                "properties": {
+                    "url": "http://localhost:8086",
+                    "token": "your-token-here",
+                    "org": "daq_org",
+                    "bucket": "industrial_data",
+                    "measurement": "plc_readings",
+                    "batch_size": 100,
+                    "flush_interval_ms": 5000,
+                    "precision": "ms",
+                    "auto_reconnect": true
+                }
+            },
+            {
+                "id": "2dec63be-a04b-4e49-996e-67be98d44262",
+                "type": "daq:data_probe",
+                "label": "DebugProbe",
+                "position": {
+                    "x": 275.0,
+                    "y": 100.0
+                },
+                "properties": {
+                    "label": "DebugProbe",
+                    "probe_id": "2dec63be-a04b-4e49-996e-67be98d44262"
+                }
+            }
+        ],
+        "wires": [
+            {
+                "id": "wire-rtu-to-math",
+                "source": {
+                    "nodeId": "modbus-rtu-sensor",
+                    "portId": "value"
+                },
+                "target": {
+                    "nodeId": "math-temp",
+                    "portId": "input1"
+                }
+            },
+            {
+                "id": "wire-math-to-csv",
+                "source": {
+                    "nodeId": "math-convert",
+                    "portId": "result"
+                },
+                "target": {
+                    "nodeId": "csv-industrial",
+                    "portId": "value"
+                }
+            },
+            {
+                "id": "wire-temp-to-influx",
+                "source": {
+                    "nodeId": "math-temp",
+                    "portId": "result"
+                },
+                "target": {
+                    "nodeId": "influxdb-store",
+                    "portId": "fields"
+                }
+            },
+            {
+                "id": "335c0c45-e33e-4c41-8318-31ae899f2b9d",
+                "source": {
+                    "nodeId": "modbus-tcp-plc",
+                    "portId": "value"
+                },
+                "target": {
+                    "nodeId": "2dec63be-a04b-4e49-996e-67be98d44262",
+                    "portId": "input"
+                }
+            },
+            {
+                "id": "5c0a1acc-dad3-4257-8d63-bab0902cf561",
+                "source": {
+                    "nodeId": "2dec63be-a04b-4e49-996e-67be98d44262",
+                    "portId": "output"
+                },
+                "target": {
+                    "nodeId": "math-convert",
+                    "portId": "input1"
+                }
+            }
+        ]
+    },
+    "ui": {
+        "widgets": []
+    }
+}

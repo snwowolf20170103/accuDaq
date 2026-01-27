@@ -1,0 +1,172 @@
+{
+    "_comment": "\u6d4b\u8bd58: \u65e0\u7ebf\u8bbe\u5907\u901a\u4fe1 - Bluetooth\u548cBLE\u8bbe\u5907\u6d4b\u8bd5",
+    "meta": {
+        "name": "Test08_WirelessDevices",
+        "version": "1.0.0",
+        "schemaVersion": "0.1.0",
+        "description": "\u6d4b\u8bd5\u65e0\u7ebf\u901a\u4fe1\u7ec4\u4ef6\uff1aBluetooth RFCOMM\u548cBLE\u8bbe\u5907\u7684\u8fde\u63a5\u3001\u6570\u636e\u8bfb\u53d6\u548c\u5199\u5165"
+    },
+    "devices": [],
+    "logic": {
+        "nodes": [
+            {
+                "id": "bt-rfcomm-sensor",
+                "type": "daq:bluetooth_rfcomm",
+                "label": "Bluetooth Sensor",
+                "position": {
+                    "x": 100,
+                    "y": 150
+                },
+                "properties": {
+                    "address": "00:11:22:33:44:55",
+                    "port": 1,
+                    "auto_reconnect": true
+                }
+            },
+            {
+                "id": "ble-heart-rate",
+                "type": "daq:ble_device",
+                "label": "BLE Heart Rate",
+                "position": {
+                    "x": 100,
+                    "y": 350
+                },
+                "properties": {
+                    "address": "AA:BB:CC:DD:EE:FF",
+                    "service_uuid": "180D",
+                    "characteristic_uuid": "2A37",
+                    "enable_notifications": true,
+                    "auto_reconnect": true
+                }
+            },
+            {
+                "id": "debug-bt",
+                "type": "daq:debug_print",
+                "label": "BT Debug",
+                "position": {
+                    "x": 400,
+                    "y": 150
+                },
+                "properties": {
+                    "prefix": "BLUETOOTH",
+                    "format": "json"
+                }
+            },
+            {
+                "id": "debug-ble",
+                "type": "daq:debug_print",
+                "label": "BLE Debug",
+                "position": {
+                    "x": 400,
+                    "y": 350
+                },
+                "properties": {
+                    "prefix": "BLE_DATA",
+                    "format": "json"
+                }
+            },
+            {
+                "id": "mqtt-wireless",
+                "type": "daq:mqtt_publish",
+                "label": "Wireless Data Pub",
+                "position": {
+                    "x": 700,
+                    "y": 150
+                },
+                "properties": {
+                    "broker_host": "localhost",
+                    "broker_port": 1883,
+                    "topic": "test/wireless/data"
+                }
+            },
+            {
+                "id": "csv-wireless",
+                "type": "daq:csv_storage",
+                "label": "Wireless Log",
+                "position": {
+                    "x": 700,
+                    "y": 350
+                },
+                "properties": {
+                    "file_path": "./data/test08_wireless.csv",
+                    "append_mode": true,
+                    "include_timestamp": true,
+                    "flush_interval": 10
+                }
+            },
+            {
+                "id": "5f67bd23-82ea-449e-b359-e69cb6d0e0e0",
+                "type": "daq:data_probe",
+                "label": "DebugProbe",
+                "position": {
+                    "x": 250.0,
+                    "y": 150.0
+                },
+                "properties": {
+                    "label": "DebugProbe",
+                    "probe_id": "5f67bd23-82ea-449e-b359-e69cb6d0e0e0"
+                }
+            }
+        ],
+        "wires": [
+            {
+                "id": "wire-ble-to-debug",
+                "source": {
+                    "nodeId": "ble-heart-rate",
+                    "portId": "notification"
+                },
+                "target": {
+                    "nodeId": "debug-ble",
+                    "portId": "value"
+                }
+            },
+            {
+                "id": "wire-bt-debug-to-mqtt",
+                "source": {
+                    "nodeId": "debug-bt",
+                    "portId": "value_out"
+                },
+                "target": {
+                    "nodeId": "mqtt-wireless",
+                    "portId": "data"
+                }
+            },
+            {
+                "id": "wire-ble-to-csv",
+                "source": {
+                    "nodeId": "ble-heart-rate",
+                    "portId": "read_value"
+                },
+                "target": {
+                    "nodeId": "csv-wireless",
+                    "portId": "data"
+                }
+            },
+            {
+                "id": "7c6cebf6-ee64-459c-bb5d-8e5e1bc517ca",
+                "source": {
+                    "nodeId": "bt-rfcomm-sensor",
+                    "portId": "read_data"
+                },
+                "target": {
+                    "nodeId": "5f67bd23-82ea-449e-b359-e69cb6d0e0e0",
+                    "portId": "input"
+                }
+            },
+            {
+                "id": "2dd39e65-bd9c-4a1d-ad72-1ba1b423957d",
+                "source": {
+                    "nodeId": "5f67bd23-82ea-449e-b359-e69cb6d0e0e0",
+                    "portId": "output"
+                },
+                "target": {
+                    "nodeId": "debug-bt",
+                    "portId": "value"
+                }
+            }
+        ]
+    },
+    "ui": {
+        "widgets": []
+    }
+}

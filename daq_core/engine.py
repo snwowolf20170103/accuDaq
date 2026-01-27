@@ -50,85 +50,51 @@ class DAQEngine:
         self._main_loop_thread: Optional[threading.Thread] = None
         self._stop_event = threading.Event()
         self._tick_interval = 0.1  # 100ms
+        
+        # 调试功能
+        self._debug_enabled = False
+        self._mqtt_client = None
+        self._debug_topic_base = "accudaq/debug/flow"
 
         # 配置日志
         logging.basicConfig(
             level=logging.INFO,
             format="%(asctime)s [%(levelname)s] %(name)s: %(message)s"
         )
-
-    def add_component(
-        self,
-        component_name: str,
-        instance_id: Optional[str] = None,
-        config: Optional[Dict] = None
-    ) -> Optional[ComponentBase]:
-        """添加组件实例"""
-        component = ComponentRegistry.create(component_name, instance_id, config)
-        if component:
-            self._components[component.instance_id] = component
-            logger.info(f"添加组件: {component_name} (ID: {component.instance_id})")
-            return component
-        else:
-            logger.error(f"无法创建组件: {component_name}")
-            return None
-
-    def remove_component(self, instance_id: str):
-        """移除组件"""
-        if instance_id in self._components:
-            component = self._components.pop(instance_id)
-            component.destroy()
-            # 移除相关连接
-            self._connections = [
-                c for c in self._connections
-                if c.source_component_id != instance_id and c.target_component_id != instance_id
-            ]
-            logger.info(f"移除组件: {instance_id}")
+        
+    def add_component(self, type_name: str, instance_id: str, config: Dict[str, Any] = None) -> ComponentBase:
+        """添加并配置组件"""
+        component = ComponentRegistry.create(type_name, instance_id, config)
+        if component is None:
+            raise ValueError(f"无法创建组件: {type_name}")
+        self._components[instance_id] = component
+        return component
 
     def get_component(self, instance_id: str) -> Optional[ComponentBase]:
         """获取组件实例"""
         return self._components.get(instance_id)
 
-    def connect(
-        self,
-        source_id: str,
-        source_port: str,
-        target_id: str,
-        target_port: str
-    ) -> bool:
-        """连接两个组件的端口"""
-        source = self._components.get(source_id)
-        target = self._components.get(target_id)
+    def connect(self, source_id: str, source_port: str, target_id: str, target_port: str):
+        """建立组件间的连接"""
+        connection = Connection(source_id, source_port, target_id, target_port)
+        self._connections.append(connection)
+        logger.debug(f"建立连接: {source_id}:{source_port} -> {target_id}:{target_port}")
 
-        if not source:
-            logger.error(f"源组件不存在: {source_id}")
-            return False
-        if not target:
-            logger.error(f"目标组件不存在: {target_id}")
-            return False
-        if source_port not in source.output_ports:
-            logger.error(f"源组件 {source_id} 没有输出端口: {source_port}")
-            return False
-        if target_port not in target.input_ports:
-            logger.error(f"目标组件 {target_id} 没有输入端口: {target_port}")
-            return False
-
-        conn = Connection(source_id, source_port, target_id, target_port)
-        self._connections.append(conn)
-        logger.info(f"建立连接: {source_id}.{source_port} -> {target_id}.{target_port}")
-        return True
-
-    def disconnect(self, source_id: str, source_port: str, target_id: str, target_port: str):
-        """断开连接"""
-        self._connections = [
-            c for c in self._connections
-            if not (
-                c.source_component_id == source_id and
-                c.source_port == source_port and
-                c.target_component_id == target_id and
-                c.target_port == target_port
-            )
-        ]
+    def enable_debug(self, host='localhost', port=1883):
+        """开启调试模式，推送数据流到 MQTT"""
+        try:
+            import paho.mqtt.client as mqtt
+            import json
+            
+            self._mqtt_client = mqtt.Client()
+            self._mqtt_client.connect(host, port, 60)
+            self._mqtt_client.loop_start()
+            self._debug_enabled = True
+            logging.info(f"调试模式已开启 (MQTT: {host}:{port})")
+        except ImportError:
+            logging.warning("无法开启调试模式: 缺少 paho-mqtt 库")
+        except Exception as e:
+            logging.error(f"开启调试模式失败: {e}")
 
     def _transfer_data(self):
         """传输连接间的数据"""
@@ -139,8 +105,27 @@ class DAQEngine:
             if source and target:
                 if conn.source_port in source.output_ports:
                     value = source.output_ports[conn.source_port].get_value()
-                    if value is not None and conn.target_port in target.input_ports:
-                        target.input_ports[conn.target_port].set_value(value)
+                    
+                    # 只有当值不为 None 时才传输和报告
+                    if value is not None:
+                        # 调试发布
+                        if self._debug_enabled and self._mqtt_client:
+                            try:
+                                # 构造唯一的 topic ID
+                                # 格式: accudaq/debug/edge/sourceId___sourcePort___targetId___targetPort
+                                edge_key = f"{conn.source_component_id}___{conn.source_port}___{conn.target_component_id}___{conn.target_port}"
+                                topic = f"accudaq/debug/edge/{edge_key}"
+                                
+                                # Payload 只发 value，为了减少带宽，或者发简单对象
+                                payload = value
+                                
+                                import json
+                                self._mqtt_client.publish(topic, json.dumps(payload))
+                            except Exception:
+                                pass # 忽略调试过程中的错误
+
+                        if conn.target_port in target.input_ports:
+                            target.input_ports[conn.target_port].set_value(value)
 
     # 需要在主循环中主动调用 process() 的组件
     # MQTT/MockDevice 有自己的线程，不需要在这里处理
@@ -148,6 +133,8 @@ class DAQEngine:
         "MathOperation", "Compare", "CSVStorage", "CustomScript",
         "ThresholdAlarm", "DebugPrint", "GlobalVariable", "ModbusClient",
         "WhileLoop", "Conditional",
+        # MQTT 发布和数据探针
+        "MQTTPublisher", "DataProbe",
         # 高级算法组件
         "FFT", "MovingAverageFilter", "LowPassFilter", "HighPassFilter",
         "PIDController", "KalmanFilter", "Statistics",

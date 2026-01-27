@@ -29,6 +29,7 @@ NODE_TYPE_MAPPING = {
     "daq:threshold_alarm": "ThresholdAlarm",  # 新增 - 阈值报警
     "daq:debug_print": "DebugPrint",  # 新增 - 调试打印
     "daq:global_variable": "GlobalVariable",  # 新增 - 全局变量
+    "daq:data_probe": "DataProbe",  # 数据探针 - 实时可视化
 
     # 存储组件
     "daq:csv_write": "CSVStorage",
@@ -117,6 +118,7 @@ class CodeGenerator:
         self._add_line("import sys")
         self._add_line("import time")
         self._add_line("import logging")
+        self._add_line("from daq_core.system.log_server import start_log_server, WebSocketLogHandler")
         self._add_line()
         self._add_line("# DAQ Core 导入")
         self._add_line("from daq_core.engine import DAQEngine")
@@ -235,7 +237,16 @@ class CodeGenerator:
         self._add_line(f'print("DAQ 项目: {self.project.meta.name}")', 1)
         self._add_line('print("=" * 60)', 1)
         self._add_line()
+        self._add_line("# 启动日志服务器", 1)
+        self._add_line("try:", 1)
+        self._add_line("start_log_server()", 2)
+        self._add_line("logging.getLogger().addHandler(WebSocketLogHandler())", 2)
+        self._add_line("except Exception as e:", 1)
+        self._add_line('print(f"警告: 无法启动日志服务器: {e}")', 2)
+        self._add_line()
         self._add_line("engine = create_engine()", 1)
+        self._add_line()
+
         self._add_line()
 
         # 如果有 MQTT 节点，设置回调

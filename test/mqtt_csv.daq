@@ -1,0 +1,200 @@
+{
+    "meta": {
+        "name": "MQTT CSV Complex Workflow",
+        "version": "1.0.0",
+        "schemaVersion": "0.1.0"
+    },
+    "devices": [],
+    "logic": {
+        "nodes": [
+            {
+                "id": "node-mock-device",
+                "type": "daq:mock_device",
+                "label": "Mock Device",
+                "position": {
+                    "x": 150,
+                    "y": 100
+                },
+                "properties": {
+                    "device_name": "Sensor01",
+                    "broker_host": "localhost",
+                    "broker_port": 1883,
+                    "topic": "accudaq/demo/sensor",
+                    "wave_type": "sine",
+                    "amplitude": 10,
+                    "offset": 25,
+                    "frequency": 0.1,
+                    "interval_ms": 1000
+                }
+            },
+            {
+                "id": "node-math-op",
+                "type": "daq:math",
+                "label": "Math Operation",
+                "position": {
+                    "x": 400,
+                    "y": 100
+                },
+                "properties": {
+                    "operation": "scale",
+                    "scale": 100,
+                    "offset": 0
+                }
+            },
+            {
+                "id": "node-compare",
+                "type": "daq:compare",
+                "label": "Compare",
+                "position": {
+                    "x": 650,
+                    "y": 100
+                },
+                "properties": {
+                    "compare_type": "greater",
+                    "threshold": 0,
+                    "tolerance": 0
+                }
+            },
+            {
+                "id": "node-mqtt-pub",
+                "type": "daq:mqtt_publish",
+                "label": "MQTT Publish",
+                "position": {
+                    "x": 150,
+                    "y": 300
+                },
+                "properties": {
+                    "broker_host": "localhost",
+                    "broker_port": 1883,
+                    "topic": "accudaq/demo/processed"
+                }
+            },
+            {
+                "id": "node-mqtt-sub",
+                "type": "daq:mqtt_subscribe",
+                "label": "MQTT Subscribe",
+                "position": {
+                    "x": 400,
+                    "y": 300
+                },
+                "properties": {
+                    "broker_host": "localhost",
+                    "broker_port": 1883,
+                    "topic": "accudaq/demo/processed"
+                }
+            },
+            {
+                "id": "node-csv-storage",
+                "type": "daq:csv_storage",
+                "label": "CSV Storage",
+                "position": {
+                    "x": 650,
+                    "y": 300
+                },
+                "properties": {
+                    "file_path": "./data/test_complex_output.csv",
+                    "append_mode": true,
+                    "include_timestamp": true,
+                    "flush_interval": 10
+                }
+            },
+            {
+                "id": "9dfca1b8-9e7d-431f-a51c-f3bdd5137bc1",
+                "type": "daq:data_probe",
+                "label": "Probe-Mock Device",
+                "position": {
+                    "x": 275.0,
+                    "y": 100.0
+                },
+                "properties": {
+                    "label": "Probe-Mock Device",
+                    "probe_id": "9dfca1b8-9e7d-431f-a51c-f3bdd5137bc1"
+                }
+            },
+            {
+                "id": "5b2c3e58-5b67-4a3c-8a65-8e2e543684df",
+                "type": "daq:data_probe",
+                "label": "DebugProbe",
+                "position": {
+                    "x": 525.0,
+                    "y": 100.0
+                },
+                "properties": {
+                    "label": "DebugProbe",
+                    "probe_id": "5b2c3e58-5b67-4a3c-8a65-8e2e543684df"
+                }
+            }
+        ],
+        "wires": [
+            {
+                "id": "edge-compare-pub",
+                "source": {
+                    "nodeId": "node-math-op",
+                    "portId": "result"
+                },
+                "target": {
+                    "nodeId": "node-mqtt-pub",
+                    "portId": "data"
+                }
+            },
+            {
+                "id": "edge-sub-csv",
+                "source": {
+                    "nodeId": "node-mqtt-sub",
+                    "portId": "data"
+                },
+                "target": {
+                    "nodeId": "node-csv-storage",
+                    "portId": "data"
+                }
+            },
+            {
+                "id": "b4d0245e-df5b-4cf5-9134-8100b0dadfac",
+                "source": {
+                    "nodeId": "node-mock-device",
+                    "portId": "value"
+                },
+                "target": {
+                    "nodeId": "9dfca1b8-9e7d-431f-a51c-f3bdd5137bc1",
+                    "portId": "input"
+                }
+            },
+            {
+                "id": "29c1d295-a44a-4a55-9d9c-48fa722800d3",
+                "source": {
+                    "nodeId": "9dfca1b8-9e7d-431f-a51c-f3bdd5137bc1",
+                    "portId": "output"
+                },
+                "target": {
+                    "nodeId": "node-math-op",
+                    "portId": "input1"
+                }
+            },
+            {
+                "id": "9406ef78-8ef3-40e0-b3bc-4c26286c3cce",
+                "source": {
+                    "nodeId": "node-math-op",
+                    "portId": "result"
+                },
+                "target": {
+                    "nodeId": "5b2c3e58-5b67-4a3c-8a65-8e2e543684df",
+                    "portId": "input"
+                }
+            },
+            {
+                "id": "3cc40872-ad7a-43a4-bf09-62b76d3f8145",
+                "source": {
+                    "nodeId": "5b2c3e58-5b67-4a3c-8a65-8e2e543684df",
+                    "portId": "output"
+                },
+                "target": {
+                    "nodeId": "node-compare",
+                    "portId": "input1"
+                }
+            }
+        ]
+    },
+    "ui": {
+        "widgets": []
+    }
+}

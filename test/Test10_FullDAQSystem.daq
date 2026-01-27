@@ -1,0 +1,401 @@
+{
+    "_comment": "\u6d4b\u8bd510: \u5b8c\u6574\u6570\u636e\u91c7\u96c6\u7cfb\u7edf - \u591a\u4f20\u611f\u5668\u3001\u5904\u7406\u3001\u5b58\u50a8\u3001\u544a\u8b66\u5168\u6d41\u7a0b",
+    "meta": {
+        "name": "Test10_FullDAQSystem",
+        "version": "1.0.0",
+        "schemaVersion": "0.1.0",
+        "description": "\u5b8c\u6574\u6570\u636e\u91c7\u96c6\u7cfb\u7edf\u6d4b\u8bd5\uff1a3\u8def\u4f20\u611f\u5668\u8f93\u5165\uff0c\u7ecf\u8fc7\u6ee4\u6ce2\u548c\u6570\u5b66\u8fd0\u7b97\uff0c\u5b58\u50a8\u5230\u591a\u4e2a\u6570\u636e\u5e93\uff0c\u5e26\u544a\u8b66\u548cMQTT\u8f93\u51fa"
+    },
+    "devices": [],
+    "logic": {
+        "nodes": [
+            {
+                "id": "sensor-temp",
+                "type": "daq:mock_device",
+                "label": "Temperature",
+                "position": {
+                    "x": 100,
+                    "y": 100
+                },
+                "properties": {
+                    "device_name": "TempSensor",
+                    "wave_type": "sine",
+                    "amplitude": 10,
+                    "offset": 25,
+                    "frequency": 0.05,
+                    "interval_ms": 500
+                }
+            },
+            {
+                "id": "sensor-pressure",
+                "type": "daq:mock_device",
+                "label": "Pressure",
+                "position": {
+                    "x": 100,
+                    "y": 300
+                },
+                "properties": {
+                    "device_name": "PressureSensor",
+                    "wave_type": "square",
+                    "amplitude": 20,
+                    "offset": 100,
+                    "frequency": 0.1,
+                    "interval_ms": 500
+                }
+            },
+            {
+                "id": "sensor-flow",
+                "type": "daq:mock_device",
+                "label": "Flow Rate",
+                "position": {
+                    "x": 100,
+                    "y": 500
+                },
+                "properties": {
+                    "device_name": "FlowSensor",
+                    "wave_type": "random",
+                    "amplitude": 50,
+                    "offset": 100,
+                    "frequency": 0.2,
+                    "interval_ms": 500
+                }
+            },
+            {
+                "id": "filter-temp",
+                "type": "daq:moving_average_filter",
+                "label": "Temp Filter",
+                "position": {
+                    "x": 350,
+                    "y": 100
+                },
+                "properties": {
+                    "window_size": 5
+                }
+            },
+            {
+                "id": "filter-pressure",
+                "type": "daq:moving_average_filter",
+                "label": "Pressure Filter",
+                "position": {
+                    "x": 350,
+                    "y": 300
+                },
+                "properties": {
+                    "window_size": 5
+                }
+            },
+            {
+                "id": "math-temp",
+                "type": "daq:math",
+                "label": "Temp Scale",
+                "position": {
+                    "x": 600,
+                    "y": 100
+                },
+                "properties": {
+                    "operation": "scale",
+                    "scale": 1.8,
+                    "offset": 32,
+                    "threshold": 100
+                }
+            },
+            {
+                "id": "alarm-temp",
+                "type": "daq:threshold_alarm",
+                "label": "Temp Alarm",
+                "position": {
+                    "x": 600,
+                    "y": 200
+                },
+                "properties": {
+                    "threshold": 35,
+                    "compare_type": "greater"
+                }
+            },
+            {
+                "id": "alarm-pressure",
+                "type": "daq:threshold_alarm",
+                "label": "Pressure Alarm",
+                "position": {
+                    "x": 600,
+                    "y": 400
+                },
+                "properties": {
+                    "threshold": 115,
+                    "compare_type": "greater"
+                }
+            },
+            {
+                "id": "csv-all",
+                "type": "daq:csv_storage",
+                "label": "Main CSV Log",
+                "position": {
+                    "x": 900,
+                    "y": 100
+                },
+                "properties": {
+                    "file_path": "./data/test10_full_system.csv",
+                    "append_mode": true,
+                    "include_timestamp": true,
+                    "flush_interval": 5
+                }
+            },
+            {
+                "id": "sqlite-all",
+                "type": "daq:sqlite_storage",
+                "label": "SQLite Storage",
+                "position": {
+                    "x": 900,
+                    "y": 250
+                },
+                "properties": {
+                    "database_path": "./data/test10_full.db",
+                    "table_name": "sensor_data",
+                    "auto_create_table": true,
+                    "include_timestamp": true,
+                    "batch_size": 50
+                }
+            },
+            {
+                "id": "mqtt-alarms",
+                "type": "daq:mqtt_publish",
+                "label": "Alarm Publisher",
+                "position": {
+                    "x": 900,
+                    "y": 400
+                },
+                "properties": {
+                    "broker_host": "localhost",
+                    "broker_port": 1883,
+                    "topic": "test/full/alarms"
+                }
+            },
+            {
+                "id": "debug-system",
+                "type": "daq:debug_print",
+                "label": "System Debug",
+                "position": {
+                    "x": 900,
+                    "y": 550
+                },
+                "properties": {
+                    "prefix": "SYSTEM",
+                    "format": "json"
+                }
+            },
+            {
+                "id": "timer-heartbeat",
+                "type": "daq:timer",
+                "label": "Heartbeat",
+                "position": {
+                    "x": 100,
+                    "y": 650
+                },
+                "properties": {
+                    "interval_ms": 5000,
+                    "auto_start": true
+                }
+            },
+            {
+                "id": "counter-samples",
+                "type": "daq:counter",
+                "label": "Sample Counter",
+                "position": {
+                    "x": 350,
+                    "y": 650
+                },
+                "properties": {
+                    "initial_value": 0,
+                    "step": 1
+                }
+            },
+            {
+                "id": "0e097c6f-5d12-4649-8feb-7a4e022cdf02",
+                "type": "daq:data_probe",
+                "label": "Probe-Temperature",
+                "position": {
+                    "x": 225.0,
+                    "y": 100.0
+                },
+                "properties": {
+                    "label": "Probe-Temperature",
+                    "probe_id": "0e097c6f-5d12-4649-8feb-7a4e022cdf02"
+                }
+            },
+            {
+                "id": "2bde755d-6008-4f29-ac43-93318419c8a2",
+                "type": "daq:data_probe",
+                "label": "Probe-Pressure",
+                "position": {
+                    "x": 225.0,
+                    "y": 300.0
+                },
+                "properties": {
+                    "label": "Probe-Pressure",
+                    "probe_id": "2bde755d-6008-4f29-ac43-93318419c8a2"
+                }
+            },
+            {
+                "id": "f0b3afbf-a47f-4fab-9a7d-55da689705b1",
+                "type": "daq:data_probe",
+                "label": "Probe-Flow Rate",
+                "position": {
+                    "x": 500.0,
+                    "y": 525.0
+                },
+                "properties": {
+                    "label": "Probe-Flow Rate",
+                    "probe_id": "f0b3afbf-a47f-4fab-9a7d-55da689705b1"
+                }
+            }
+        ],
+        "wires": [
+            {
+                "id": "wire-filter-temp-to-math",
+                "source": {
+                    "nodeId": "filter-temp",
+                    "portId": "output"
+                },
+                "target": {
+                    "nodeId": "math-temp",
+                    "portId": "input1"
+                }
+            },
+            {
+                "id": "wire-filter-temp-to-alarm",
+                "source": {
+                    "nodeId": "filter-temp",
+                    "portId": "output"
+                },
+                "target": {
+                    "nodeId": "alarm-temp",
+                    "portId": "value"
+                }
+            },
+            {
+                "id": "wire-filter-pressure-to-alarm",
+                "source": {
+                    "nodeId": "filter-pressure",
+                    "portId": "output"
+                },
+                "target": {
+                    "nodeId": "alarm-pressure",
+                    "portId": "value"
+                }
+            },
+            {
+                "id": "wire-temp-to-csv",
+                "source": {
+                    "nodeId": "sensor-temp",
+                    "portId": "data"
+                },
+                "target": {
+                    "nodeId": "csv-all",
+                    "portId": "data"
+                }
+            },
+            {
+                "id": "wire-pressure-to-sqlite",
+                "source": {
+                    "nodeId": "sensor-pressure",
+                    "portId": "data"
+                },
+                "target": {
+                    "nodeId": "sqlite-all",
+                    "portId": "data"
+                }
+            },
+            {
+                "id": "wire-alarm-temp-to-mqtt",
+                "source": {
+                    "nodeId": "alarm-temp",
+                    "portId": "alarm"
+                },
+                "target": {
+                    "nodeId": "mqtt-alarms",
+                    "portId": "data"
+                }
+            },
+            {
+                "id": "wire-heartbeat-to-counter",
+                "source": {
+                    "nodeId": "timer-heartbeat",
+                    "portId": "trigger"
+                },
+                "target": {
+                    "nodeId": "counter-samples",
+                    "portId": "increment"
+                }
+            },
+            {
+                "id": "0bc349ca-2bc0-44e9-9f8f-a6ebd36e9395",
+                "source": {
+                    "nodeId": "sensor-temp",
+                    "portId": "value"
+                },
+                "target": {
+                    "nodeId": "0e097c6f-5d12-4649-8feb-7a4e022cdf02",
+                    "portId": "input"
+                }
+            },
+            {
+                "id": "8decf301-c43c-4b78-a5f5-c3d8a4616c8c",
+                "source": {
+                    "nodeId": "0e097c6f-5d12-4649-8feb-7a4e022cdf02",
+                    "portId": "output"
+                },
+                "target": {
+                    "nodeId": "filter-temp",
+                    "portId": "input"
+                }
+            },
+            {
+                "id": "c36d1ddf-37e7-41c4-8ac6-d61381fbd400",
+                "source": {
+                    "nodeId": "sensor-pressure",
+                    "portId": "value"
+                },
+                "target": {
+                    "nodeId": "2bde755d-6008-4f29-ac43-93318419c8a2",
+                    "portId": "input"
+                }
+            },
+            {
+                "id": "f7beb90e-a52d-422a-949c-0e9cfb128b30",
+                "source": {
+                    "nodeId": "2bde755d-6008-4f29-ac43-93318419c8a2",
+                    "portId": "output"
+                },
+                "target": {
+                    "nodeId": "filter-pressure",
+                    "portId": "input"
+                }
+            },
+            {
+                "id": "0b2d5f42-0708-4551-8dd0-03728a425bdf",
+                "source": {
+                    "nodeId": "sensor-flow",
+                    "portId": "value"
+                },
+                "target": {
+                    "nodeId": "f0b3afbf-a47f-4fab-9a7d-55da689705b1",
+                    "portId": "input"
+                }
+            },
+            {
+                "id": "2044fffc-453d-48d5-a6a0-fac6ac433f66",
+                "source": {
+                    "nodeId": "f0b3afbf-a47f-4fab-9a7d-55da689705b1",
+                    "portId": "output"
+                },
+                "target": {
+                    "nodeId": "debug-system",
+                    "portId": "value"
+                }
+            }
+        ]
+    },
+    "ui": {
+        "widgets": []
+    }
+}

@@ -1,0 +1,139 @@
+{
+    "_comment": "\u6d4b\u8bd51: \u57fa\u7840\u4fe1\u53f7\u91c7\u96c6\u6d41\u7a0b - Mock Device -> Math -> CSV \u5b58\u50a8",
+    "meta": {
+        "name": "Test01_BasicSignalAcquisition",
+        "version": "1.0.0",
+        "schemaVersion": "0.1.0",
+        "description": "\u6d4b\u8bd5\u57fa\u7840\u4fe1\u53f7\u91c7\u96c6\u6d41\u7a0b\uff1a\u6a21\u62df\u8bbe\u5907\u4ea7\u751f\u6b63\u5f26\u6ce2\u4fe1\u53f7\uff0c\u7ecf\u8fc7\u6570\u5b66\u8fd0\u7b97\u7f29\u653e\u540e\u5b58\u50a8\u5230CSV\u6587\u4ef6"
+    },
+    "devices": [],
+    "logic": {
+        "nodes": [
+            {
+                "id": "mock-sensor-01",
+                "type": "daq:mock_device",
+                "label": "Temperature Sensor",
+                "position": {
+                    "x": 100,
+                    "y": 150
+                },
+                "properties": {
+                    "device_name": "TempSensor01",
+                    "wave_type": "sine",
+                    "amplitude": 15,
+                    "offset": 25,
+                    "frequency": 0.05,
+                    "interval_ms": 500,
+                    "broker_host": "localhost",
+                    "broker_port": 1883,
+                    "topic": "test/sensor/temp"
+                }
+            },
+            {
+                "id": "math-scale-01",
+                "type": "daq:math",
+                "label": "Celsius to Fahrenheit",
+                "position": {
+                    "x": 400,
+                    "y": 150
+                },
+                "properties": {
+                    "operation": "scale",
+                    "scale": 1.8,
+                    "offset": 32,
+                    "threshold": 100
+                }
+            },
+            {
+                "id": "csv-output-01",
+                "type": "daq:csv_storage",
+                "label": "Temperature Log",
+                "position": {
+                    "x": 700,
+                    "y": 150
+                },
+                "properties": {
+                    "file_path": "./data/test01_temperature.csv",
+                    "append_mode": true,
+                    "include_timestamp": true,
+                    "flush_interval": 5
+                }
+            },
+            {
+                "id": "36ead815-5f89-4bc6-b340-5dee3f0eaa9c",
+                "type": "daq:data_probe",
+                "label": "Probe-Temperature Sensor",
+                "position": {
+                    "x": 250.0,
+                    "y": 150.0
+                },
+                "properties": {
+                    "label": "Probe-Temperature Sensor",
+                    "probe_id": "36ead815-5f89-4bc6-b340-5dee3f0eaa9c"
+                }
+            },
+            {
+                "id": "592ce5ac-6374-4284-a541-c41a9d985eec",
+                "type": "daq:data_probe",
+                "label": "DebugProbe",
+                "position": {
+                    "x": 550.0,
+                    "y": 150.0
+                },
+                "properties": {
+                    "label": "DebugProbe",
+                    "probe_id": "592ce5ac-6374-4284-a541-c41a9d985eec"
+                }
+            }
+        ],
+        "wires": [
+            {
+                "id": "af7e7a48-fcfd-46d0-911a-b29d29b7b59b",
+                "source": {
+                    "nodeId": "mock-sensor-01",
+                    "portId": "value"
+                },
+                "target": {
+                    "nodeId": "36ead815-5f89-4bc6-b340-5dee3f0eaa9c",
+                    "portId": "input"
+                }
+            },
+            {
+                "id": "a514596c-7ffa-4e00-8837-17b1d3710667",
+                "source": {
+                    "nodeId": "36ead815-5f89-4bc6-b340-5dee3f0eaa9c",
+                    "portId": "output"
+                },
+                "target": {
+                    "nodeId": "math-scale-01",
+                    "portId": "input1"
+                }
+            },
+            {
+                "id": "4a5095f3-b791-4a9c-bcf3-61271ff1f40d",
+                "source": {
+                    "nodeId": "math-scale-01",
+                    "portId": "result"
+                },
+                "target": {
+                    "nodeId": "592ce5ac-6374-4284-a541-c41a9d985eec",
+                    "portId": "input"
+                }
+            },
+            {
+                "id": "4834ac69-0644-468b-8282-fc23cf8ade03",
+                "source": {
+                    "nodeId": "592ce5ac-6374-4284-a541-c41a9d985eec",
+                    "portId": "output"
+                },
+                "target": {
+                    "nodeId": "csv-output-01",
+                    "portId": "value"
+                }
+            }
+        ]
+    },
+    "ui": {
+        "widgets": []
+    }
+}

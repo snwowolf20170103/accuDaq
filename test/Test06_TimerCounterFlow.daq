@@ -1,0 +1,208 @@
+{
+    "_comment": "\u6d4b\u8bd56: \u5b9a\u65f6\u5668\u548c\u8ba1\u6570\u5668\u63a7\u5236\u6d41 - Timer\u89e6\u53d1Counter\u8fdb\u884c\u8ba1\u6570\uff0c\u6761\u4ef6\u5206\u652f\u63a7\u5236\u8f93\u51fa",
+    "meta": {
+        "name": "Test06_TimerCounterFlow",
+        "version": "1.0.0",
+        "schemaVersion": "0.1.0",
+        "description": "\u6d4b\u8bd5\u63a7\u5236\u6d41\u7ec4\u4ef6\uff1aTimer\u5b9a\u65f6\u89e6\u53d1\uff0cCounter\u8ba1\u6570\uff0cConditional\u6761\u4ef6\u5206\u652f\uff0c\u5f62\u6210\u5b8c\u6574\u7684\u63a7\u5236\u903b\u8f91"
+    },
+    "devices": [],
+    "logic": {
+        "nodes": [
+            {
+                "id": "timer-trigger",
+                "type": "daq:timer",
+                "label": "Main Timer",
+                "position": {
+                    "x": 100,
+                    "y": 200
+                },
+                "properties": {
+                    "interval_ms": 500,
+                    "auto_start": true
+                }
+            },
+            {
+                "id": "counter-main",
+                "type": "daq:counter",
+                "label": "Event Counter",
+                "position": {
+                    "x": 350,
+                    "y": 200
+                },
+                "properties": {
+                    "initial_value": 0,
+                    "step": 1,
+                    "min_value": 0,
+                    "max_value": 100
+                }
+            },
+            {
+                "id": "conditional-check",
+                "type": "daq:conditional",
+                "label": "Count Check",
+                "position": {
+                    "x": 600,
+                    "y": 200
+                },
+                "properties": {
+                    "mode": "compare",
+                    "compare_type": "greater",
+                    "threshold": 50,
+                    "invert_result": false,
+                    "pass_data_through": true
+                }
+            },
+            {
+                "id": "global-var-count",
+                "type": "daq:global_variable",
+                "label": "Store Count",
+                "position": {
+                    "x": 600,
+                    "y": 350
+                },
+                "properties": {
+                    "variable_name": "current_count",
+                    "mode": "read_write",
+                    "initial_value": 0
+                }
+            },
+            {
+                "id": "mqtt-true-output",
+                "type": "daq:mqtt_publish",
+                "label": "High Count Alert",
+                "position": {
+                    "x": 900,
+                    "y": 100
+                },
+                "properties": {
+                    "broker_host": "localhost",
+                    "broker_port": 1883,
+                    "topic": "test/counter/high"
+                }
+            },
+            {
+                "id": "mqtt-false-output",
+                "type": "daq:mqtt_publish",
+                "label": "Normal Count",
+                "position": {
+                    "x": 900,
+                    "y": 300
+                },
+                "properties": {
+                    "broker_host": "localhost",
+                    "broker_port": 1883,
+                    "topic": "test/counter/normal"
+                }
+            },
+            {
+                "id": "debug-counter",
+                "type": "daq:debug_print",
+                "label": "Counter Debug",
+                "position": {
+                    "x": 350,
+                    "y": 400
+                },
+                "properties": {
+                    "prefix": "COUNT",
+                    "format": "simple"
+                }
+            },
+            {
+                "id": "b5af2cf4-d23e-47df-b335-5faaea6bd667",
+                "type": "daq:data_probe",
+                "label": "DebugProbe",
+                "position": {
+                    "x": 225.0,
+                    "y": 200.0
+                },
+                "properties": {
+                    "label": "DebugProbe",
+                    "probe_id": "b5af2cf4-d23e-47df-b335-5faaea6bd667"
+                }
+            }
+        ],
+        "wires": [
+            {
+                "id": "wire-counter-to-cond",
+                "source": {
+                    "nodeId": "counter-main",
+                    "portId": "value"
+                },
+                "target": {
+                    "nodeId": "conditional-check",
+                    "portId": "value1"
+                }
+            },
+            {
+                "id": "wire-counter-to-global",
+                "source": {
+                    "nodeId": "counter-main",
+                    "portId": "value"
+                },
+                "target": {
+                    "nodeId": "global-var-count",
+                    "portId": "value_in"
+                }
+            },
+            {
+                "id": "wire-counter-to-debug",
+                "source": {
+                    "nodeId": "counter-main",
+                    "portId": "value"
+                },
+                "target": {
+                    "nodeId": "debug-counter",
+                    "portId": "value"
+                }
+            },
+            {
+                "id": "wire-cond-true",
+                "source": {
+                    "nodeId": "conditional-check",
+                    "portId": "true_out"
+                },
+                "target": {
+                    "nodeId": "mqtt-true-output",
+                    "portId": "data"
+                }
+            },
+            {
+                "id": "wire-cond-false",
+                "source": {
+                    "nodeId": "conditional-check",
+                    "portId": "false_out"
+                },
+                "target": {
+                    "nodeId": "mqtt-false-output",
+                    "portId": "data"
+                }
+            },
+            {
+                "id": "dd8d1f99-1f14-41e5-8015-558ae1911b7d",
+                "source": {
+                    "nodeId": "timer-trigger",
+                    "portId": "trigger"
+                },
+                "target": {
+                    "nodeId": "b5af2cf4-d23e-47df-b335-5faaea6bd667",
+                    "portId": "input"
+                }
+            },
+            {
+                "id": "58830784-50d6-4f1d-a4ae-ccdd836790b8",
+                "source": {
+                    "nodeId": "b5af2cf4-d23e-47df-b335-5faaea6bd667",
+                    "portId": "output"
+                },
+                "target": {
+                    "nodeId": "counter-main",
+                    "portId": "increment"
+                }
+            }
+        ]
+    },
+    "ui": {
+        "widgets": []
+    }
+}

@@ -12,6 +12,7 @@ from .custom_script import CustomScriptComponent
 from .threshold_alarm import ThresholdAlarmComponent
 from .modbus_client import ModbusClientComponent
 from .debug_print import DebugPrintComponent
+from .data_probe import DataProbeComponent
 from .global_variable import GlobalVariableComponent
 from .timer import TimerComponent as Timer, CounterComponent as Counter
 from .while_loop import WhileLoopComponent
@@ -83,6 +84,7 @@ ThresholdAlarm = ThresholdAlarmComponent
 MathOperation = MathOperationComponent
 DebugPrint = DebugPrintComponent
 GlobalVariable = GlobalVariableComponent
+DataProbe = DataProbeComponent
 
 FFT = FFTComponent
 MovingAverageFilter = MovingAverageFilterComponent
@@ -116,6 +118,7 @@ __all__ = [
     "ModbusClientComponent",
     "DebugPrintComponent",
     "GlobalVariableComponent",
+    "DataProbeComponent",
     "Timer",
     "Counter",
     # 简短别名 (MVP tests use these)
@@ -126,6 +129,7 @@ __all__ = [
     "MathOperation",
     "DebugPrint",
     "GlobalVariable",
+    "DataProbe",
     # 控制流组件
     "WhileLoopComponent",
     "ConditionalComponent",

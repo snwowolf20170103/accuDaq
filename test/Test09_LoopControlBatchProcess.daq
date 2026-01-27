@@ -1,0 +1,201 @@
+{
+    "_comment": "\u6d4b\u8bd59: While\u5faa\u73af\u63a7\u5236 - \u5faa\u73af\u91c7\u96c6\u548c\u6279\u5904\u7406",
+    "meta": {
+        "name": "Test09_LoopControlBatchProcess",
+        "version": "1.0.0",
+        "schemaVersion": "0.1.0",
+        "description": "\u6d4b\u8bd5While Loop\u5faa\u73af\u63a7\u5236\uff1a\u5b9e\u73b0\u6279\u91cf\u6570\u636e\u91c7\u96c6\uff0c\u8fbe\u5230\u6307\u5b9a\u6b21\u6570\u540e\u505c\u6b62\u5e76\u8f93\u51fa\u7edf\u8ba1\u7ed3\u679c"
+    },
+    "devices": [],
+    "logic": {
+        "nodes": [
+            {
+                "id": "while-batch",
+                "type": "daq:while_loop",
+                "label": "Batch Loop",
+                "position": {
+                    "x": 100,
+                    "y": 200
+                },
+                "properties": {
+                    "max_iterations": 100,
+                    "interval_ms": 100,
+                    "auto_start": true
+                }
+            },
+            {
+                "id": "mock-batch-sensor",
+                "type": "daq:mock_device",
+                "label": "Batch Sensor",
+                "position": {
+                    "x": 400,
+                    "y": 100
+                },
+                "properties": {
+                    "device_name": "BatchSensor01",
+                    "wave_type": "random",
+                    "amplitude": 100,
+                    "offset": 50,
+                    "frequency": 1,
+                    "interval_ms": 50,
+                    "broker_host": "localhost",
+                    "broker_port": 1883,
+                    "topic": "test/batch/sensor"
+                }
+            },
+            {
+                "id": "counter-batch",
+                "type": "daq:counter",
+                "label": "Batch Counter",
+                "position": {
+                    "x": 400,
+                    "y": 300
+                },
+                "properties": {
+                    "initial_value": 0,
+                    "step": 1,
+                    "min_value": 0,
+                    "max_value": 100
+                }
+            },
+            {
+                "id": "moving-avg-batch",
+                "type": "daq:moving_average_filter",
+                "label": "Running Average",
+                "position": {
+                    "x": 700,
+                    "y": 100
+                },
+                "properties": {
+                    "window_size": 20
+                }
+            },
+            {
+                "id": "threshold-batch",
+                "type": "daq:threshold_alarm",
+                "label": "Outlier Detector",
+                "position": {
+                    "x": 700,
+                    "y": 300
+                },
+                "properties": {
+                    "threshold": 140,
+                    "compare_type": "greater"
+                }
+            },
+            {
+                "id": "csv-batch",
+                "type": "daq:csv_storage",
+                "label": "Batch Results",
+                "position": {
+                    "x": 1000,
+                    "y": 100
+                },
+                "properties": {
+                    "file_path": "./data/test09_batch.csv",
+                    "append_mode": false,
+                    "include_timestamp": true,
+                    "flush_interval": 1
+                }
+            },
+            {
+                "id": "mqtt-batch-complete",
+                "type": "daq:mqtt_publish",
+                "label": "Batch Complete",
+                "position": {
+                    "x": 1000,
+                    "y": 300
+                },
+                "properties": {
+                    "broker_host": "localhost",
+                    "broker_port": 1883,
+                    "topic": "test/batch/complete"
+                }
+            },
+            {
+                "id": "07cc3dd6-dcb1-484b-b81c-a6f4d2f58612",
+                "type": "daq:data_probe",
+                "label": "Probe-Batch Sensor",
+                "position": {
+                    "x": 550.0,
+                    "y": 100.0
+                },
+                "properties": {
+                    "label": "Probe-Batch Sensor",
+                    "probe_id": "07cc3dd6-dcb1-484b-b81c-a6f4d2f58612"
+                }
+            }
+        ],
+        "wires": [
+            {
+                "id": "wire-loop-to-counter",
+                "source": {
+                    "nodeId": "while-batch",
+                    "portId": "loop_body"
+                },
+                "target": {
+                    "nodeId": "counter-batch",
+                    "portId": "increment"
+                }
+            },
+            {
+                "id": "wire-sensor-to-threshold",
+                "source": {
+                    "nodeId": "mock-batch-sensor",
+                    "portId": "value"
+                },
+                "target": {
+                    "nodeId": "threshold-batch",
+                    "portId": "value"
+                }
+            },
+            {
+                "id": "wire-avg-to-csv",
+                "source": {
+                    "nodeId": "moving-avg-batch",
+                    "portId": "output"
+                },
+                "target": {
+                    "nodeId": "csv-batch",
+                    "portId": "value"
+                }
+            },
+            {
+                "id": "wire-loop-complete-to-mqtt",
+                "source": {
+                    "nodeId": "while-batch",
+                    "portId": "completed"
+                },
+                "target": {
+                    "nodeId": "mqtt-batch-complete",
+                    "portId": "data"
+                }
+            },
+            {
+                "id": "c994d77e-dc7a-4f28-b5ae-e58181aa02bf",
+                "source": {
+                    "nodeId": "mock-batch-sensor",
+                    "portId": "value"
+                },
+                "target": {
+                    "nodeId": "07cc3dd6-dcb1-484b-b81c-a6f4d2f58612",
+                    "portId": "input"
+                }
+            },
+            {
+                "id": "8af071c0-affb-47c7-8946-9dbdfd5c21a8",
+                "source": {
+                    "nodeId": "07cc3dd6-dcb1-484b-b81c-a6f4d2f58612",
+                    "portId": "output"
+                },
+                "target": {
+                    "nodeId": "moving-avg-batch",
+                    "portId": "input"
+                }
+            }
+        ]
+    },
+    "ui": {
+        "widgets": []
+    }
+}
