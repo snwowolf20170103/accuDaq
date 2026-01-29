@@ -3,7 +3,7 @@
  * Wraps the visual flow editor with toolbar, debug panel, and property panel
  * Isolates canvas state updates from main App re-renders
  */
-import React, { memo, useCallback } from 'react'
+import React, { memo } from 'react'
 import {
     ReactFlow,
     Background,
@@ -50,10 +50,13 @@ const miniMapNodeColor = (node: any) => {
     }
 }
 
+// LabVIEW-style light theme for minimap
 const miniMapStyle: React.CSSProperties = {
-    backgroundColor: '#0f0f1a',
-    height: 150,
-    width: 200
+    backgroundColor: '#f0f0f0',
+    height: 120,
+    width: 160,
+    border: '1px solid #c0c0c0',
+    borderRadius: 4,
 }
 
 const debugPanelStyle: React.CSSProperties = {
@@ -155,11 +158,6 @@ function EditorCanvasComponent({
     DevicePanelComponent,
 }: EditorCanvasProps) {
 
-    const handleDemoMode = useCallback(() => {
-        onToggleRun()
-        onToggleEdgeData()
-    }, [onToggleRun, onToggleEdgeData])
-
     return (
         <div className="app-container">
             {showDevicePanel ? (
@@ -210,11 +208,12 @@ function EditorCanvasComponent({
                         maxZoom={4}
                         defaultEdgeOptions={defaultEdgeOptions}
                     >
-                        <Background color="#2a2a4a" gap={20} />
+                        {/* LabVIEW-style light gray grid background */}
+                        <Background color="#c0c0c0" gap={20} style={{ backgroundColor: '#f8f8f8' }} />
                         <Controls />
                         <MiniMap
                             nodeColor={miniMapNodeColor}
-                            maskColor="rgba(26, 26, 46, 0.7)"
+                            maskColor="rgba(200, 200, 200, 0.5)"
                             style={miniMapStyle}
                             zoomable
                             pannable

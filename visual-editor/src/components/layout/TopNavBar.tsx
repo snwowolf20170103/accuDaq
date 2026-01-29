@@ -1,71 +1,127 @@
 /**
- * TopNavBar - Extracted navigation bar component
- * Manages project name display, view switching, and tool panel toggles
- * Isolates navbar state updates from main App re-renders
+ * TopNavBar - LabVIEW-style navigation bar
+ * Uses "前面板" (Front Panel) and "程序框图" (Block Diagram) as primary tabs
+ * Ctrl+E to toggle between panels (LabVIEW shortcut)
  */
 import React, { memo } from 'react'
 import { EditorMode } from '../../types'
 
-// Hoisted static styles for better performance (Vercel: rendering-hoist-jsx)
+// LabVIEW-style color palette
+const lvColors = {
+    menuBarBg: '#e8e8e8',           // Light gray menu bar
+    menuBarBorder: '#c0c0c0',       // Border color
+    tabActive: '#ffffff',           // Active tab background
+    tabInactive: '#d0d0d0',         // Inactive tab background
+    tabHover: '#f0f0f0',            // Hover state
+    accent: '#0066cc',              // LabVIEW blue accent
+    textPrimary: '#1a1a1a',         // Primary text
+    textSecondary: '#666666',       // Secondary text
+    runGreen: '#00aa00',            // Run button green
+    stopRed: '#cc0000',             // Stop button red
+    toolbarBg: '#f5f5f5',           // Toolbar background
+}
+
+// LabVIEW-style navbar
 const navBarStyle: React.CSSProperties = {
-    height: 50,
-    background: '#16213e',
-    borderBottom: '1px solid #2a2a4a',
+    height: 32,
+    background: lvColors.menuBarBg,
+    borderBottom: `1px solid ${lvColors.menuBarBorder}`,
     display: 'flex',
     alignItems: 'center',
-    padding: '0 20px',
-    justifyContent: 'space-between'
+    padding: '0 8px',
+    justifyContent: 'space-between',
+    fontFamily: 'Segoe UI, Tahoma, sans-serif',
+    fontSize: 12,
 }
+
+// Panel tabs container (LabVIEW-style)
+const panelTabsStyle: React.CSSProperties = {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 0,
+    marginLeft: 8,
+}
+
+// Individual panel tab style
+const getPanelTabStyle = (isActive: boolean): React.CSSProperties => ({
+    background: isActive ? lvColors.tabActive : lvColors.tabInactive,
+    border: `1px solid ${lvColors.menuBarBorder}`,
+    borderBottom: isActive ? 'none' : `1px solid ${lvColors.menuBarBorder}`,
+    borderRadius: '4px 4px 0 0',
+    padding: '6px 20px',
+    cursor: 'pointer',
+    fontWeight: isActive ? 600 : 400,
+    color: isActive ? lvColors.textPrimary : lvColors.textSecondary,
+    fontSize: 13,
+    marginBottom: isActive ? -1 : 0,
+    transition: 'all 0.15s ease',
+    display: 'flex',
+    alignItems: 'center',
+    gap: 6,
+})
 
 const logoSectionStyle: React.CSSProperties = {
     display: 'flex',
     alignItems: 'center',
-    gap: 16
+    gap: 8,
 }
 
-const viewSwitcherStyle: React.CSSProperties = {
+const projectNameStyle: React.CSSProperties = {
     display: 'flex',
-    background: '#0f0f1a',
-    borderRadius: 6,
-    padding: 4
+    alignItems: 'center',
+    gap: 8,
+    padding: '4px 12px',
+    background: '#fff',
+    border: `1px solid ${lvColors.menuBarBorder}`,
+    borderRadius: 3,
+    fontSize: 12,
+}
+
+const menuButtonStyle: React.CSSProperties = {
+    background: 'transparent',
+    border: 'none',
+    color: lvColors.textPrimary,
+    padding: '4px 10px',
+    cursor: 'pointer',
+    fontSize: 12,
+    fontWeight: 400,
+    borderRadius: 2,
 }
 
 const toolSectionStyle: React.CSSProperties = {
     display: 'flex',
     alignItems: 'center',
-    gap: 10
-}
-
-const baseButtonStyle: React.CSSProperties = {
-    background: '#2a2a4a',
-    border: 'none',
-    color: '#fff',
-    padding: '4px 12px',
-    borderRadius: 4,
-    cursor: 'pointer',
-    fontSize: 12,
-    fontWeight: 500,
-}
-
-const viewButtonStyle: React.CSSProperties = {
-    border: 'none',
-    padding: '6px 16px',
-    borderRadius: 4,
-    cursor: 'pointer',
-    fontWeight: 500,
-    transition: 'all 0.2s'
+    gap: 4,
 }
 
 const toolButtonStyle: React.CSSProperties = {
-    background: '#2a2a4a',
+    background: lvColors.toolbarBg,
+    color: lvColors.textPrimary,
+    border: `1px solid ${lvColors.menuBarBorder}`,
+    padding: '4px 8px',
+    borderRadius: 3,
+    cursor: 'pointer',
+    fontWeight: 400,
+    fontSize: 11,
+    display: 'flex',
+    alignItems: 'center',
+    gap: 4,
+}
+
+const runButtonStyle = (isRunning: boolean): React.CSSProperties => ({
+    background: isRunning ? lvColors.stopRed : lvColors.runGreen,
     color: '#fff',
     border: 'none',
-    padding: '6px 12px',
-    borderRadius: 4,
+    padding: '4px 16px',
+    borderRadius: 3,
     cursor: 'pointer',
-    fontWeight: 500,
+    fontWeight: 600,
     fontSize: 12,
-}
+    display: 'flex',
+    alignItems: 'center',
+    gap: 4,
+    boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+})
 
 type ViewType = 'editor' | 'dashboard' | 'flowdesigner' | 'industry' | 'blockly' | 'commlog' | 'replay' | 'history' | 'scheduler'
 
@@ -103,11 +159,11 @@ function TopNavBarComponent({
     editorMode,
     isRunning,
     debugMode,
-    dashboardEditMode,
-    showDevicePanel,
+    dashboardEditMode: _dashboardEditMode,  // Reserved for future menu dropdown
+    showDevicePanel: _showDevicePanel,      // Reserved for future menu dropdown
     showAIAssistant,
-    showDebugger,
-    showGitPanel,
+    showDebugger: _showDebugger,            // Reserved for future menu dropdown
+    showGitPanel: _showGitPanel,            // Reserved for future menu dropdown
     onNewProject,
     onSaveProject,
     onOpenProject,
@@ -115,170 +171,126 @@ function TopNavBarComponent({
     onSetEditorMode,
     onToggleRun,
     onToggleDebugMode,
-    onToggleDashboardEditMode,
-    onToggleDevicePanel,
+    onToggleDashboardEditMode: _onToggleDashboardEditMode, // Reserved for future menu dropdown
+    onToggleDevicePanel: _onToggleDevicePanel,             // Reserved for future menu dropdown
     onToggleAIAssistant,
-    onToggleDebugger,
-    onToggleGitPanel,
-    onShowCICD,
+    onToggleDebugger: _onToggleDebugger,    // Reserved for future menu dropdown
+    onToggleGitPanel: _onToggleGitPanel,    // Reserved for future menu dropdown
+    onShowCICD: _onShowCICD,                // Reserved for future menu dropdown
     onShowSettings,
 }: TopNavBarProps) {
 
-    const getViewButtonStyle = (isActive: boolean): React.CSSProperties => ({
-        ...viewButtonStyle,
-        background: isActive ? '#2a2a4a' : 'transparent',
-        color: isActive ? '#fff' : '#888',
-    })
+    // Determine if we're in Front Panel (dashboard) or Block Diagram (editor) mode
+    const isFrontPanel = view === 'dashboard'
+    const isBlockDiagram = view === 'editor' && editorMode === 'visual'
 
     return (
         <div style={navBarStyle}>
-            {/* Logo and Project Section */}
-            <div style={logoSectionStyle}>
-                <span style={{ fontSize: 20 }}>🚀</span>
-                <span style={{ fontWeight: 700, color: '#fff' }}>DAQ IDE</span>
-                <span style={{ color: '#888', fontSize: 13 }}>|</span>
-                <span style={{ color: '#4a90d9', fontSize: 14, fontWeight: 500 }}>{projectName}</span>
-                <button onClick={onNewProject} style={baseButtonStyle}>+ New</button>
-                <button onClick={onSaveProject} title="保存项目到文件" style={baseButtonStyle}>💾 Save</button>
-                <button onClick={onOpenProject} title="打开已保存的项目" style={baseButtonStyle}>📂 Open</button>
-            </div>
+            {/* Left: Logo + File Menu + Panel Tabs */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                {/* Logo */}
+                <div style={logoSectionStyle}>
+                    <span style={{ fontSize: 16 }}>⚡</span>
+                    <span style={{ fontWeight: 700, color: lvColors.textPrimary, fontSize: 13 }}>DAQ IDE</span>
+                </div>
 
-            {/* View Switcher */}
-            <div style={viewSwitcherStyle}>
-                <button
-                    onClick={() => { onSetView('editor'); onSetEditorMode('visual') }}
-                    style={getViewButtonStyle(view === 'editor' && editorMode === 'visual')}
-                >
-                    📊 Visual
-                </button>
-                <button
-                    onClick={() => { onSetView('editor'); onSetEditorMode('code') }}
-                    style={getViewButtonStyle(view === 'editor' && editorMode === 'code')}
-                >
-                    💻 Code
-                </button>
-                <button onClick={() => onSetView('dashboard')} style={getViewButtonStyle(view === 'dashboard')}>
-                    Dashboard
-                </button>
-                <button onClick={() => onSetView('flowdesigner')} style={getViewButtonStyle(view === 'flowdesigner')}>
-                    🔧 流程
-                </button>
-                <button onClick={() => onSetView('industry')} style={getViewButtonStyle(view === 'industry')}>
-                    🏭 工业控件
-                </button>
-                <button onClick={() => onSetView('blockly')} style={getViewButtonStyle(view === 'blockly')}>
-                    🧩 Blockly
-                </button>
-                <button onClick={() => onSetView('commlog')} style={getViewButtonStyle(view === 'commlog')}>
-                    📡 通信日志
-                </button>
-                <button onClick={() => onSetView('replay')} style={getViewButtonStyle(view === 'replay')}>
-                    ⏪ 数据回放
-                </button>
-                <button onClick={() => onSetView('history')} style={getViewButtonStyle(view === 'history')}>
-                    📊 历史数据
-                </button>
-                <button onClick={() => onSetView('scheduler')} style={getViewButtonStyle(view === 'scheduler')}>
-                    ⏰ 任务调度
-                </button>
-                {view === 'dashboard' && (
-                    <button
-                        onClick={onToggleDashboardEditMode}
-                        style={{
-                            background: dashboardEditMode ? '#4fc3f7' : '#3c3c3c',
-                            color: '#fff',
-                            border: 'none',
-                            padding: '6px 12px',
-                            borderRadius: 4,
-                            cursor: 'pointer',
-                            fontWeight: 500,
-                            fontSize: 12,
-                            marginLeft: 8,
-                        }}
+                {/* File menu buttons */}
+                <div style={{ display: 'flex', gap: 2 }}>
+                    <button onClick={onNewProject} style={menuButtonStyle}>文件(F)</button>
+                    <button onClick={onOpenProject} style={menuButtonStyle}>编辑(E)</button>
+                    <button style={menuButtonStyle}>查看(V)</button>
+                    <button style={menuButtonStyle}>项目(P)</button>
+                    <button style={menuButtonStyle}>操作(O)</button>
+                    <button style={menuButtonStyle}>工具(T)</button>
+                    <button style={menuButtonStyle}>帮助(H)</button>
+                </div>
+
+                {/* LabVIEW-style Panel Tabs */}
+                <div style={panelTabsStyle}>
+                    <div
+                        style={getPanelTabStyle(isFrontPanel)}
+                        onClick={() => onSetView('dashboard')}
+                        title="前面板 - UI设计器 (Ctrl+E 切换)"
                     >
-                        {dashboardEditMode ? '🔓 编辑中' : '🔒 已锁定'}
-                    </button>
-                )}
+                        <span>📊</span>
+                        <span>前面板</span>
+                    </div>
+                    <div
+                        style={getPanelTabStyle(isBlockDiagram)}
+                        onClick={() => { onSetView('editor'); onSetEditorMode('visual') }}
+                        title="程序框图 - 逻辑设计器 (Ctrl+E 切换)"
+                    >
+                        <span>🔧</span>
+                        <span>程序框图</span>
+                    </div>
+                    <div
+                        style={getPanelTabStyle(view === 'editor' && editorMode === 'code')}
+                        onClick={() => { onSetView('editor'); onSetEditorMode('code') }}
+                        title="代码视图"
+                    >
+                        <span>💻</span>
+                        <span>代码</span>
+                    </div>
+                </div>
+
+                {/* Project name */}
+                <div style={projectNameStyle}>
+                    <span style={{ color: lvColors.textSecondary }}>项目:</span>
+                    <span style={{ color: lvColors.textPrimary, fontWeight: 500 }}>{projectName}</span>
+                </div>
             </div>
 
-            {/* Tool Buttons */}
+            {/* Right: Tool buttons */}
             <div style={toolSectionStyle}>
-                {view === 'editor' && editorMode === 'visual' && (
-                    <button
-                        onClick={onToggleDevicePanel}
-                        style={{
-                            ...toolButtonStyle,
-                            background: showDevicePanel ? '#9b59b6' : '#2a2a4a',
-                        }}
-                    >
-                        📡 {showDevicePanel ? '组件库' : '设备'}
-                    </button>
-                )}
-                <button
-                    onClick={onToggleAIAssistant}
-                    style={{
-                        ...toolButtonStyle,
-                        background: showAIAssistant ? '#9b59b6' : '#2a2a4a',
-                    }}
-                >
-                    🤖 AI 助手
+                {/* Quick access buttons */}
+                <button onClick={onNewProject} style={toolButtonStyle} title="新建项目 (Ctrl+N)">
+                    📄 新建
                 </button>
-                <button
-                    onClick={onToggleDebugger}
-                    style={{
-                        ...toolButtonStyle,
-                        background: showDebugger ? '#3498db' : '#2a2a4a',
-                    }}
-                    title="数据流调试器"
-                >
-                    🔍 调试器
+                <button onClick={onSaveProject} style={toolButtonStyle} title="保存 (Ctrl+S)">
+                    💾 保存
                 </button>
+                <button onClick={onOpenProject} style={toolButtonStyle} title="打开 (Ctrl+O)">
+                    📂 打开
+                </button>
+
+                <span style={{ width: 1, height: 20, background: lvColors.menuBarBorder, margin: '0 4px' }} />
+
+                {/* Debug toggle */}
                 <button
                     onClick={onToggleDebugMode}
                     style={{
                         ...toolButtonStyle,
-                        background: debugMode ? '#e67e22' : '#2a2a4a',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 4,
+                        background: debugMode ? '#fff3cd' : lvColors.toolbarBg,
+                        borderColor: debugMode ? '#ffc107' : lvColors.menuBarBorder,
                     }}
-                    title={debugMode ? 'Disable Debug Mode' : 'Enable Debug Mode'}
+                    title={debugMode ? '关闭调试模式' : '开启调试模式'}
                 >
-                    🐛 {debugMode ? 'Debug ON' : 'Debug'}
-                </button>
-                <button onClick={onShowCICD} style={toolButtonStyle}>
-                    🔧 CI/CD
-                </button>
-                <button
-                    onClick={onToggleGitPanel}
-                    style={{
-                        ...toolButtonStyle,
-                        background: showGitPanel ? '#f1502f' : '#2a2a4a',
-                    }}
-                >
-                    📦 Git
-                </button>
-                <button onClick={onShowSettings} style={toolButtonStyle}>
-                    ⚙️ 设置
+                    🐛 {debugMode ? '调试中' : '调试'}
                 </button>
 
+                {/* AI Assistant */}
                 <button
-                    onClick={onToggleRun}
+                    onClick={onToggleAIAssistant}
                     style={{
-                        background: isRunning ? '#e74c3c' : '#2ecc71',
-                        color: '#fff',
-                        border: 'none',
-                        padding: '6px 16px',
-                        borderRadius: 4,
-                        cursor: 'pointer',
-                        fontWeight: 700,
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 6,
-                        boxShadow: '0 0 10px ' + (isRunning ? 'rgba(231, 76, 60, 0.4)' : 'rgba(46, 204, 113, 0.4)')
+                        ...toolButtonStyle,
+                        background: showAIAssistant ? '#e3f2fd' : lvColors.toolbarBg,
+                        borderColor: showAIAssistant ? '#2196f3' : lvColors.menuBarBorder,
                     }}
+                    title="AI 助手"
                 >
-                    {isRunning ? '🛑 STOP' : '▶️ RUN'}
+                    🤖 AI
+                </button>
+
+                {/* Settings */}
+                <button onClick={onShowSettings} style={toolButtonStyle} title="设置">
+                    ⚙️
+                </button>
+
+                <span style={{ width: 1, height: 20, background: lvColors.menuBarBorder, margin: '0 4px' }} />
+
+                {/* Run/Stop button - LabVIEW style */}
+                <button onClick={onToggleRun} style={runButtonStyle(isRunning)}>
+                    {isRunning ? '■ 停止' : '▶ 运行'}
                 </button>
             </div>
         </div>

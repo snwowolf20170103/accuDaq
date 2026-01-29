@@ -1,3 +1,26 @@
+/* LabVIEW Theme Variables */
+:root {
+  /* LabVIEW-style light gray theme */
+  --lv-bg-primary: #f0f0f0;
+  --lv-bg-secondary: #e8e8e8;
+  --lv-bg-tertiary: #d0d0d0;
+  --lv-border: #c0c0c0;
+  --lv-border-dark: #a0a0a0;
+  --lv-text-primary: #1a1a1a;
+  --lv-text-secondary: #666666;
+  --lv-accent: #0066cc;
+  --lv-accent-light: #e3f2fd;
+  --lv-run-green: #00aa00;
+  --lv-stop-red: #cc0000;
+  --lv-canvas-bg: #f8f8f8;
+  --lv-canvas-grid: #e0e0e0;
+
+  /* Keep dark theme variables for canvas/nodes */
+  --node-bg: linear-gradient(135deg, #1e1e3f 0%, #2a2a4a 100%);
+  --node-border: #3a3a5a;
+  --node-text: #ffffff;
+}
+
 * {
   margin: 0;
   padding: 0;
@@ -9,7 +32,8 @@ body,
 #root {
   width: 100%;
   height: 100%;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: 'Segoe UI', Tahoma, 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: var(--lv-bg-primary);
 }
 
 .app-container {
@@ -113,40 +137,42 @@ body,
   margin-top: 4px;
 }
 
-/* Canvas Area */
+/* Canvas Area - LabVIEW-style light theme */
 .canvas-container {
   flex: 1;
   display: flex;
   flex-direction: column;
-  background: #0f0f1a;
+  background: var(--lv-canvas-bg, #f8f8f8);
 }
 
 .canvas-toolbar {
-  height: 50px;
-  background: #1a1a2e;
-  border-bottom: 1px solid #2a2a4a;
+  height: 36px;
+  background: var(--lv-bg-secondary, #e8e8e8);
+  border-bottom: 1px solid var(--lv-border, #c0c0c0);
   display: flex;
   align-items: center;
-  padding: 0 16px;
-  gap: 12px;
+  padding: 0 12px;
+  gap: 8px;
 }
 
+/* LabVIEW-style toolbar buttons */
 .toolbar-btn {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 8px 16px;
-  background: rgba(255, 255, 255, 0.1);
-  border: none;
-  border-radius: 6px;
-  color: #e0e0e0;
-  font-size: 13px;
+  gap: 4px;
+  padding: 4px 10px;
+  background: var(--lv-bg-primary, #f0f0f0);
+  border: 1px solid var(--lv-border, #c0c0c0);
+  border-radius: 3px;
+  color: var(--lv-text-primary, #1a1a1a);
+  font-size: 11px;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.15s ease;
 }
 
 .toolbar-btn:hover {
-  background: rgba(74, 144, 217, 0.3);
+  background: var(--lv-accent-light, #e3f2fd);
+  border-color: var(--lv-accent, #0066cc);
 }
 
 .toolbar-btn.primary {
@@ -177,117 +203,120 @@ body,
   flex: 1;
 }
 
-/* React Flow Styling */
+/* React Flow Styling - LabVIEW light theme */
 .react-flow__background {
-  background-color: #0f0f1a !important;
+  background-color: var(--lv-canvas-bg, #f8f8f8) !important;
 }
 
 .react-flow__node {
-  border-radius: 8px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  border-radius: 6px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 
 .react-flow__edge-path {
   stroke-width: 2;
 }
 
+/* LabVIEW-style controls */
 .react-flow__controls {
-  background: #1a1a2e;
-  border-radius: 8px;
-  border: 1px solid #2a2a4a;
+  background: var(--lv-bg-primary, #f0f0f0);
+  border-radius: 4px;
+  border: 1px solid var(--lv-border, #c0c0c0);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
 }
 
 .react-flow__controls-button {
-  background: #1a1a2e;
-  border-color: #2a2a4a;
-  fill: #e0e0e0;
+  background: var(--lv-bg-primary, #f0f0f0);
+  border-color: var(--lv-border, #c0c0c0);
+  fill: var(--lv-text-primary, #1a1a1a);
 }
 
 .react-flow__controls-button:hover {
-  background: #2a2a4a;
+  background: var(--lv-accent-light, #e3f2fd);
 }
 
 .react-flow__minimap {
-  background: #1a1a2e;
-  border-radius: 8px;
-  border: 1px solid #2a2a4a;
+  background: var(--lv-bg-primary, #f0f0f0);
+  border-radius: 4px;
+  border: 1px solid var(--lv-border, #c0c0c0);
 }
 
-/* Property Panel */
+/* Property Panel - LabVIEW light theme */
 .property-panel {
-  width: 320px;
-  background: linear-gradient(180deg, #1a1a2e 0%, #16213e 100%);
-  border-left: 1px solid #2a2a4a;
+  width: 280px;
+  background: var(--lv-bg-primary, #f0f0f0);
+  border-left: 1px solid var(--lv-border, #c0c0c0);
   display: flex;
   flex-direction: column;
-  color: #e0e0e0;
+  color: var(--lv-text-primary, #1a1a1a);
 }
 
 .panel-header {
-  padding: 20px;
-  border-bottom: 1px solid #2a2a4a;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--lv-border, #c0c0c0);
+  background: var(--lv-bg-secondary, #e8e8e8);
 }
 
 .panel-header h3 {
-  font-size: 16px;
+  font-size: 13px;
   font-weight: 600;
-  color: #fff;
+  color: var(--lv-text-primary, #1a1a1a);
 }
 
 .panel-content {
   flex: 1;
   overflow-y: auto;
-  padding: 16px;
+  padding: 12px;
 }
 
 .property-group {
-  margin-bottom: 20px;
+  margin-bottom: 16px;
 }
 
 .property-group-title {
   font-size: 11px;
   font-weight: 600;
   text-transform: uppercase;
-  color: #888;
-  margin-bottom: 12px;
+  color: var(--lv-text-secondary, #666666);
+  margin-bottom: 8px;
   letter-spacing: 0.5px;
 }
 
 .property-row {
-  margin-bottom: 12px;
+  margin-bottom: 10px;
 }
 
 .property-label {
-  font-size: 12px;
-  color: #aaa;
+  font-size: 11px;
+  color: var(--lv-text-secondary, #666666);
   margin-bottom: 4px;
 }
 
 .property-input {
   width: 100%;
-  padding: 10px 12px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid #2a2a4a;
-  border-radius: 6px;
-  color: #fff;
-  font-size: 14px;
-  transition: all 0.2s ease;
+  padding: 6px 10px;
+  background: #ffffff;
+  border: 1px solid var(--lv-border, #c0c0c0);
+  border-radius: 3px;
+  color: var(--lv-text-primary, #1a1a1a);
+  font-size: 12px;
+  transition: all 0.15s ease;
 }
 
 .property-input:focus {
   outline: none;
-  border-color: #4a90d9;
-  background: rgba(255, 255, 255, 0.1);
+  border-color: var(--lv-accent, #0066cc);
+  box-shadow: 0 0 0 2px var(--lv-accent-light, #e3f2fd);
 }
 
 .property-select {
   width: 100%;
-  padding: 10px 12px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid #2a2a4a;
-  border-radius: 6px;
-  color: #fff;
-  font-size: 14px;
+  padding: 6px 10px;
+  background: #ffffff;
+  border: 1px solid var(--lv-border, #c0c0c0);
+  border-radius: 3px;
+  color: var(--lv-text-primary, #1a1a1a);
+  font-size: 12px;
 }
 
 /* Custom Node Styles */

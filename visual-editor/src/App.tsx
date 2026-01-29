@@ -166,12 +166,22 @@ function App() {
                         e.preventDefault()
                         handlePaste()
                         break
+                    case 'e':
+                        // LabVIEW-style: Ctrl+E toggles between Front Panel and Block Diagram
+                        e.preventDefault()
+                        if (view === 'dashboard') {
+                            setView('editor')
+                            setEditorMode('visual')
+                        } else {
+                            setView('dashboard')
+                        }
+                        break
                 }
             }
         }
         window.addEventListener('keydown', handleKeyDown)
         return () => window.removeEventListener('keydown', handleKeyDown)
-    }, [handleUndo, handleRedo, handleCopy, handlePaste])
+    }, [handleUndo, handleRedo, handleCopy, handlePaste, view])
 
 
 
