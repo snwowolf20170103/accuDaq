@@ -1,12 +1,14 @@
 /**
- * PanelsContainer - Extracted container for lazy-loaded views
- * Manages the conditional rendering of different application panels
- * Isolates the loading suspicion and view switching logic
+ * PanelsContainer - LabVIEW风格的面板容器
+ * 根据当前视图动态切换左侧面板：
+ * - 前面板(dashboard)：显示控件选板
+ * - 程序框图(editor)：显示函数选板
  */
 import React, { memo, Suspense, lazy } from 'react'
 import { EditorMode } from '../../types'
 import { EditorCanvas } from './EditorCanvas'
 import CodeView from '../CodeView'
+import FrontPanelPalette from '../FrontPanelPalette'
 
 // Re-using the types from parent for now, could be moved to shared types
 type ViewType = 'editor' | 'dashboard' | 'flowdesigner' | 'industry' | 'blockly' | 'commlog' | 'replay' | 'history' | 'scheduler'
@@ -28,10 +30,11 @@ const PanelLoader = () => (
         alignItems: 'center',
         justifyContent: 'center',
         height: '100%',
-        color: '#888'
+        color: '#666',
+        background: '#f8f8f8',
     }}>
         <div className="loading-spinner"></div>
-        <span style={{ marginLeft: 10 }}>Loading Module...</span>
+        <span style={{ marginLeft: 10 }}>加载模块中...</span>
     </div>
 )
 
@@ -64,7 +67,7 @@ function PanelsContainerComponent({
     onSetView
 }: PanelsContainerProps) {
 
-    // Render logic per view
+    // 渲染主内容区域
     const renderContent = () => {
         switch (view) {
             case 'editor':
@@ -82,17 +85,25 @@ function PanelsContainerComponent({
 
             case 'dashboard':
                 return (
-                    <Suspense fallback={<PanelLoader />}>
-                        <DashboardDesigner
-                            editMode={dashboardProps.editMode}
-                            isRunning={dashboardProps.isRunning}
-                            widgets={dashboardProps.widgets}
-                            layout={dashboardProps.layout}
-                            availableOutputs={dashboardProps.availableOutputs}
-                            onWidgetsChange={dashboardProps.onWidgetsChange}
-                            onLayoutChange={dashboardProps.onLayoutChange}
-                        />
-                    </Suspense>
+                    <div className="app-container">
+                        {/* 前面板视图：左侧显示控件选板 */}
+                        <FrontPanelPalette />
+
+                        {/* Dashboard设计器 */}
+                        <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+                            <Suspense fallback={<PanelLoader />}>
+                                <DashboardDesigner
+                                    editMode={dashboardProps.editMode}
+                                    isRunning={dashboardProps.isRunning}
+                                    widgets={dashboardProps.widgets}
+                                    layout={dashboardProps.layout}
+                                    availableOutputs={dashboardProps.availableOutputs}
+                                    onWidgetsChange={dashboardProps.onWidgetsChange}
+                                    onLayoutChange={dashboardProps.onLayoutChange}
+                                />
+                            </Suspense>
+                        </div>
+                    </div>
                 )
 
             case 'flowdesigner':
@@ -141,3 +152,4 @@ function PanelsContainerComponent({
 
 export const PanelsContainer = memo(PanelsContainerComponent)
 export default PanelsContainer
+
