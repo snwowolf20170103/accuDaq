@@ -1536,7 +1536,7 @@ export const componentLibrary: ComponentDefinition[] = [
         name: 'OPC UA 节点读取',
         category: 'protocol',
         icon: '📖',
-        description: '读取 OPC UA 服务器节点值',
+        description: '读取 OPC UA 服务器节点值，支持 MQTT 转发',
         inputs: [
             { id: 'client', name: 'Client', type: 'any' },
         ],
@@ -1548,10 +1548,18 @@ export const componentLibrary: ComponentDefinition[] = [
         defaultProperties: {
             node_id: 'ns=2;i=1',
             poll_interval_ms: 1000,
+            mqtt_enabled: false,
+            mqtt_broker: 'localhost',
+            mqtt_port: 1883,
+            mqtt_topic: 'opcua/data',
         },
         propertySchema: [
             { key: 'node_id', label: 'Node ID', type: 'text' },
             { key: 'poll_interval_ms', label: 'Poll Interval (ms)', type: 'number' },
+            { key: 'mqtt_enabled', label: 'MQTT Forwarding', type: 'boolean' },
+            { key: 'mqtt_broker', label: 'MQTT Broker', type: 'text' },
+            { key: 'mqtt_port', label: 'MQTT Port', type: 'number' },
+            { key: 'mqtt_topic', label: 'MQTT Topic', type: 'text' },
         ]
     },
     {
@@ -1581,7 +1589,7 @@ export const componentLibrary: ComponentDefinition[] = [
         name: 'OPC UA 订阅',
         category: 'protocol',
         icon: '🔔',
-        description: '订阅 OPC UA 节点变化',
+        description: '订阅 OPC UA 节点变化，支持 MQTT 转发',
         inputs: [
             { id: 'client', name: 'Client', type: 'any' },
         ],
@@ -1592,10 +1600,18 @@ export const componentLibrary: ComponentDefinition[] = [
         defaultProperties: {
             node_ids: 'ns=2;i=1',
             publish_interval_ms: 500,
+            mqtt_enabled: false,
+            mqtt_broker: 'localhost',
+            mqtt_port: 1883,
+            mqtt_topic: 'opcua/subscription',
         },
         propertySchema: [
             { key: 'node_ids', label: 'Node IDs (comma separated)', type: 'text' },
             { key: 'publish_interval_ms', label: 'Publish Interval (ms)', type: 'number' },
+            { key: 'mqtt_enabled', label: 'MQTT Forwarding', type: 'boolean' },
+            { key: 'mqtt_broker', label: 'MQTT Broker', type: 'text' },
+            { key: 'mqtt_port', label: 'MQTT Port', type: 'number' },
+            { key: 'mqtt_topic', label: 'MQTT Topic', type: 'text' },
         ]
     },
 
@@ -2135,6 +2151,81 @@ export const componentLibrary: ComponentDefinition[] = [
                 ]
             },
             { key: 'asdu_address', label: 'ASDU Address', type: 'number' },
+        ]
+    },
+    // IEC 101 数据点
+    {
+        type: 'iec101_data_point',
+        name: 'IEC 101 数据点',
+        category: 'protocol',
+        icon: '📍',
+        description: '读取 IEC 101 遥测/遥信数据，支持 MQTT 转发',
+        inputs: [
+            { id: 'master', name: 'Master', type: 'any' },
+            { id: 'command_value', name: 'Command Value', type: 'number' },
+        ],
+        outputs: [
+            { id: 'value', name: 'Value', type: 'number' },
+            { id: 'quality', name: 'Quality', type: 'string' },
+            { id: 'raw_data', name: 'Raw Data', type: 'object' },
+        ],
+        defaultProperties: {
+            ioa: 1,
+            type_id: 'M_ME_NC_1',
+            poll_interval_ms: 1000,
+            mqtt_enabled: false,
+            mqtt_broker: 'localhost',
+            mqtt_port: 1883,
+            mqtt_topic: 'iec101/data',
+        },
+        propertySchema: [
+            { key: 'ioa', label: 'Information Object Address', type: 'number' },
+            {
+                key: 'type_id', label: 'Type ID', type: 'select', options: [
+                    { value: 'M_SP_NA_1', label: '单点信息 (遥信)' },
+                    { value: 'M_DP_NA_1', label: '双点信息' },
+                    { value: 'M_ME_NC_1', label: '短浮点测量值 (遥测)' },
+                ]
+            },
+            { key: 'poll_interval_ms', label: 'Poll Interval (ms)', type: 'number' },
+            { key: 'mqtt_enabled', label: 'MQTT Forwarding', type: 'boolean' },
+            { key: 'mqtt_broker', label: 'MQTT Broker', type: 'text' },
+            { key: 'mqtt_port', label: 'MQTT Port', type: 'number' },
+            { key: 'mqtt_topic', label: 'MQTT Topic', type: 'text' },
+        ]
+    },
+    // IEC 103 数据点
+    {
+        type: 'iec103_data_point',
+        name: 'IEC 103 数据点',
+        category: 'protocol',
+        icon: '📍',
+        description: '读取 IEC 103 继电保护数据，支持 MQTT 转发',
+        inputs: [
+            { id: 'master', name: 'Master', type: 'any' },
+        ],
+        outputs: [
+            { id: 'value', name: 'Value', type: 'number' },
+            { id: 'quality', name: 'Quality', type: 'string' },
+            { id: 'raw_data', name: 'Raw Data', type: 'object' },
+        ],
+        defaultProperties: {
+            function_type: 1,
+            info_number: 1,
+            poll_interval_ms: 1000,
+            mqtt_enabled: false,
+            mqtt_broker: 'localhost',
+            mqtt_port: 1883,
+            mqtt_topic: 'iec103/data',
+        },
+        propertySchema: [
+            { key: 'function_type', label: 'Function Type', type: 'number' },
+            { key: 'info_number', label: 'Information Number', type: 'number' },
+            { key: 'poll_interval_ms', label: 'Poll Interval (ms)', type: 'number' },
+            { key: 'mqtt_enabled', label: 'MQTT Forwarding', type: 'boolean' },
+            { key: 'mqtt_broker', label: 'MQTT Broker', type: 'text' },
+            { key: 'mqtt_port', label: 'MQTT Port', type: 'number' },
+            { key: 'mqtt_topic', label: 'MQTT Topic', type: 'text' },
         ]
     },
     // DNP3 主站

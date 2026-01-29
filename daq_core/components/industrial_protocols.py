@@ -448,6 +448,7 @@ class IEC101MasterComponent(ComponentBase):
             self.start()
 
 
+
 # ============ IEC 60870-5-103 组件 ============
 
 @ComponentRegistry.register
@@ -476,6 +477,7 @@ class IEC103MasterComponent(ComponentBase):
         self.asdu_address = self.config.get('asdu_address', 1)
         self._connected = False
         self._simulation_mode = False
+        self._data_points = {}
         
     def start(self):
         super().start()
@@ -512,6 +514,205 @@ class IEC103MasterComponent(ComponentBase):
             self.stop()
         elif enable is True and not self._connected:
             self.start()
+
+
+@ComponentRegistry.register
+class IEC101DataPointComponent(ComponentBase):
+    """
+    IEC 101 数据点组件
+    读取遥测/遥信数据，支持 MQTT 转发
+    """
+    component_name = "IEC101DataPoint"
+    component_type = ComponentType.DEVICE
+    
+    def _setup_ports(self):
+        self.add_input_port("master", PortType.ANY)
+        self.add_input_port("command_value", PortType.NUMBER)
+        self.add_output_port("value", PortType.NUMBER)
+        self.add_output_port("quality", PortType.STRING)
+        self.add_output_port("raw_data", PortType.OBJECT)
+    
+    def _on_configure(self):
+        self.ioa = self.config.get('ioa', 1)  # 信息对象地址
+        self.type_id = self.config.get('type_id', 'M_ME_NC_1')  # 类型标识
+        
+        self.mqtt_enabled = self.config.get('mqtt_enabled', False)
+        self.mqtt_broker = self.config.get('mqtt_broker', 'localhost')
+        self.mqtt_port = self.config.get('mqtt_port', 1883)
+        self.mqtt_topic = self.config.get('mqtt_topic', 'iec101/data')
+        
+        self._mqtt_client = None
+        self._last_poll = 0
+        self._poll_interval_ms = self.config.get('poll_interval_ms', 1000)
+        self._simulation_counter = 0
+    
+    def start(self):
+        super().start()
+        if self.mqtt_enabled:
+            try:
+                import paho.mqtt.client as mqtt
+                self._mqtt_client = mqtt.Client()
+                self._mqtt_client.connect(self.mqtt_broker, self.mqtt_port, 60)
+                self._mqtt_client.loop_start()
+            except Exception as e:
+                logger.error(f"MQTT connection failed: {e}")
+    
+    def stop(self):
+        if self._mqtt_client:
+            try:
+                self._mqtt_client.loop_stop()
+                self._mqtt_client.disconnect()
+            except:
+                pass
+        super().stop()
+        
+    def process(self):
+        import math
+        
+        current_time = time.time() * 1000
+        if current_time - self._last_poll < self._poll_interval_ms:
+            return
+            
+        self._last_poll = current_time
+        timestamp_str = time.strftime("%Y-%m-%d %H:%M:%S")
+        
+        master_component = self.get_input("master")
+        is_simulation = True
+        value = 0
+        quality = "Good"
+        
+        if master_component and hasattr(master_component, '_data_points'):
+            is_simulation = getattr(master_component, '_simulation_mode', True)
+            if not is_simulation:
+                point = master_component._data_points.get(self.ioa)
+                if point:
+                    value = point.get('value', 0)
+                    quality = point.get('quality', 'Good')
+        
+        if is_simulation:
+            self._simulation_counter += 1
+            value = round(220 + 10 * math.sin(self._simulation_counter * 0.1), 2)  # 模拟电压
+            quality = "Good (Simulation)"
+        
+        data = {
+            "protocol": "IEC101",
+            "ioa": self.ioa,
+            "type_id": self.type_id,
+            "value": value,
+            "quality": quality,
+            "timestamp": timestamp_str,
+            "source": "simulation" if is_simulation else "iec101"
+        }
+        
+        self.set_output("value", value)
+        self.set_output("quality", quality)
+        self.set_output("raw_data", data)
+        
+        if self.mqtt_enabled and self._mqtt_client:
+            try:
+                self._mqtt_client.publish(self.mqtt_topic, json.dumps(data))
+            except Exception as e:
+                logger.error(f"MQTT publish error: {e}")
+
+
+@ComponentRegistry.register
+class IEC103DataPointComponent(ComponentBase):
+    """
+    IEC 103 数据点组件
+    读取继电保护设备数据，支持 MQTT 转发
+    """
+    component_name = "IEC103DataPoint"
+    component_type = ComponentType.DEVICE
+    
+    def _setup_ports(self):
+        self.add_input_port("master", PortType.ANY)
+        self.add_output_port("value", PortType.NUMBER)
+        self.add_output_port("quality", PortType.STRING)
+        self.add_output_port("raw_data", PortType.OBJECT)
+    
+    def _on_configure(self):
+        self.function_type = self.config.get('function_type', 1)  # 功能类型
+        self.info_number = self.config.get('info_number', 1)  # 信息序号
+        
+        self.mqtt_enabled = self.config.get('mqtt_enabled', False)
+        self.mqtt_broker = self.config.get('mqtt_broker', 'localhost')
+        self.mqtt_port = self.config.get('mqtt_port', 1883)
+        self.mqtt_topic = self.config.get('mqtt_topic', 'iec103/data')
+        
+        self._mqtt_client = None
+        self._last_poll = 0
+        self._poll_interval_ms = self.config.get('poll_interval_ms', 1000)
+        self._simulation_counter = 0
+    
+    def start(self):
+        super().start()
+        if self.mqtt_enabled:
+            try:
+                import paho.mqtt.client as mqtt
+                self._mqtt_client = mqtt.Client()
+                self._mqtt_client.connect(self.mqtt_broker, self.mqtt_port, 60)
+                self._mqtt_client.loop_start()
+            except Exception as e:
+                logger.error(f"MQTT connection failed: {e}")
+    
+    def stop(self):
+        if self._mqtt_client:
+            try:
+                self._mqtt_client.loop_stop()
+                self._mqtt_client.disconnect()
+            except:
+                pass
+        super().stop()
+        
+    def process(self):
+        import math
+        
+        current_time = time.time() * 1000
+        if current_time - self._last_poll < self._poll_interval_ms:
+            return
+            
+        self._last_poll = current_time
+        timestamp_str = time.strftime("%Y-%m-%d %H:%M:%S")
+        
+        master_component = self.get_input("master")
+        is_simulation = True
+        value = 0
+        quality = "Good"
+        
+        if master_component and hasattr(master_component, '_data_points'):
+            is_simulation = getattr(master_component, '_simulation_mode', True)
+            if not is_simulation:
+                key = (self.function_type, self.info_number)
+                point = master_component._data_points.get(key)
+                if point:
+                    value = point.get('value', 0)
+                    quality = point.get('quality', 'Good')
+        
+        if is_simulation:
+            self._simulation_counter += 1
+            # 模拟继电保护数据（如电流、电压）
+            value = round(5.0 + 2.0 * math.sin(self._simulation_counter * 0.08), 3)
+            quality = "Good (Simulation)"
+        
+        data = {
+            "protocol": "IEC103",
+            "function_type": self.function_type,
+            "info_number": self.info_number,
+            "value": value,
+            "quality": quality,
+            "timestamp": timestamp_str,
+            "source": "simulation" if is_simulation else "iec103"
+        }
+        
+        self.set_output("value", value)
+        self.set_output("quality", quality)
+        self.set_output("raw_data", data)
+        
+        if self.mqtt_enabled and self._mqtt_client:
+            try:
+                self._mqtt_client.publish(self.mqtt_topic, json.dumps(data))
+            except Exception as e:
+                logger.error(f"MQTT publish error: {e}")
 
 
 # ============ DNP3 组件 ============

@@ -190,26 +190,21 @@ function App() {
 
                         // For now: mixed mode. 
                         else if (!hasBackendData) {
-                            // Simulation logic (fallback)
+                            // Simulation logic (fallback) - reserved for future use
                             const sourceHandle = edge.sourceHandle || ''
-                            let value: any
+                            let _simulatedValue: any
                             if (sourceHandle.includes('value') || sourceHandle.includes('result')) {
-                                value = Math.round((Math.sin(Date.now() / 1000) + 1) * 50 * 100) / 100
+                                _simulatedValue = Math.round((Math.sin(Date.now() / 1000) + 1) * 50 * 100) / 100
                             } else if (sourceHandle.includes('alarm') || sourceHandle.includes('exceeded')) {
-                                value = Math.random() > 0.7
+                                _simulatedValue = Math.random() > 0.7
                             } else if (sourceHandle.includes('data')) {
-                                value = { temp: Math.round(Math.random() * 40), ts: Date.now() }
+                                _simulatedValue = { temp: Math.round(Math.random() * 40), ts: Date.now() }
                             } else {
-                                value = Math.round(Math.random() * 100 * 100) / 100
+                                _simulatedValue = Math.round(Math.random() * 100 * 100) / 100
                             }
-                            // Only apply simulation if we really suspect no backend is running
-                            // But to avoid confusion, let's only do this if we are SURE.
-
-                            // Let's strictly use the backend data if available. 
-                            // If this was started via "Demo Data Flow" button, we want simulation.
-                            // How to detect? 
-                            // The "Demo Data Flow" button sets isRunning=true but doesn't call /api/engine/start
-                            // So we can check if the engine is running?
+                            // Note: _simulatedValue is computed but not used yet.
+                            // This is reserved for demo mode without backend.
+                            void _simulatedValue
                         }
                     })
 
@@ -1736,49 +1731,10 @@ function App() {
             />
 
             {/* Settings Panel */}
-            {showSettingsPanel && (
-                <div style={{
-                    position: 'fixed',
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    background: 'rgba(0,0,0,0.7)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    zIndex: 1000,
-                }}>
-                    <div style={{
-                        background: '#1e1e2e',
-                        borderRadius: 16,
-                        padding: 24,
-                        maxWidth: 600,
-                        maxHeight: '80vh',
-                        overflow: 'auto',
-                        position: 'relative',
-                    }}>
-                        <button
-                            onClick={() => setShowSettingsPanel(false)}
-                            style={{
-                                position: 'absolute',
-                                top: 16,
-                                right: 16,
-                                background: 'rgba(255,255,255,0.1)',
-                                border: 'none',
-                                color: '#fff',
-                                width: 32,
-                                height: 32,
-                                borderRadius: 8,
-                                cursor: 'pointer',
-                            }}
-                        >
-                            ✕
-                        </button>
-                        <SettingsPanel />
-                    </div>
-                </div>
-            )}
+            <SettingsPanel
+                isOpen={showSettingsPanel}
+                onClose={() => setShowSettingsPanel(false)}
+            />
 
             {/* Project List Dialog */}
             {showProjectList && (

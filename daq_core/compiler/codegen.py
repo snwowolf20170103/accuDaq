@@ -100,9 +100,11 @@ NODE_TYPE_MAPPING = {
     
     # 电力协议组件 - IEC 60870-5-101
     "iec101_master": "IEC101Master",
+    "iec101_data_point": "IEC101DataPoint",
     
     # 电力协议组件 - IEC 60870-5-103
     "iec103_master": "IEC103Master",
+    "iec103_data_point": "IEC103DataPoint",
     
     # 电力协议组件 - DNP3
     "dnp3_master": "DNP3Master",
