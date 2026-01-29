@@ -31,6 +31,7 @@ import { SwitchWidget } from './widgets/SwitchWidget'
 import { NumberInputWidget } from './widgets/NumberInputWidget'
 import { LineChartWidget } from './widgets/LineChartWidget'
 import { useMqtt, MqttMessage } from '../hooks/useMqtt'
+import BindingWizard from './BindingWizard'
 
 export interface Widget {
     id: string
@@ -79,6 +80,10 @@ const DashboardDesigner = ({
     const [showWidgetToolbar, setShowWidgetToolbar] = useState(editMode)
     const [showPropertyPanel, setShowPropertyPanel] = useState(false)
 
+    // 绑定向导状态
+    const [showBindingWizard, setShowBindingWizard] = useState(false)
+    const [pendingWidget, setPendingWidget] = useState<{ widget: Widget; layout: LayoutItem } | null>(null)
+
     // MQTT connection for real-time data
     const { isConnected, messages, history, subscribe } = useMqtt({
         brokerUrl: isRunning ? `ws://${brokerHost}:8083/mqtt` : ''
@@ -112,7 +117,7 @@ const DashboardDesigner = ({
         }
     }, [initialLayout])
 
-    // 添加控件
+    // 添加控件 - 先创建控件，然后弹出绑定向导
     const handleAddWidget = useCallback((type: Widget['type']) => {
         const id = `widget_${Date.now()}`
 
@@ -131,17 +136,52 @@ const DashboardDesigner = ({
             h: getDefaultHeight(type)
         }
 
-        const updatedWidgets = [...widgets, newWidget]
-        const updatedLayout = [...layout, newLayoutItem]
+        // 如果有可用的节点输出，弹出绑定向导
+        if (availableOutputs.length > 0) {
+            setPendingWidget({ widget: newWidget, layout: newLayoutItem })
+            setShowBindingWizard(true)
+        } else {
+            // 没有可用输出，直接添加控件
+            finishAddWidget(newWidget, newLayoutItem, null)
+        }
+    }, [widgets, layout, availableOutputs])
+
+    // 完成添加控件（绑定向导确认后调用）
+    const finishAddWidget = useCallback((widget: Widget, layoutItem: LayoutItem, binding: { type: string; path: string } | null) => {
+        const finalWidget = binding
+            ? { ...widget, binding: { type: binding.type as VariableBinding['type'], path: binding.path } }
+            : widget
+
+        const updatedWidgets = [...widgets, finalWidget]
+        const updatedLayout = [...layout, layoutItem]
 
         setWidgets(updatedWidgets)
         setLayout(updatedLayout)
-        setSelectedWidget(id)
+        setSelectedWidget(widget.id)
         setShowPropertyPanel(true)
 
         onWidgetsChange?.(updatedWidgets)
         onLayoutChange?.(updatedLayout)
     }, [widgets, layout, onWidgetsChange, onLayoutChange])
+
+    // 绑定向导确认回调
+    const handleBindingConfirm = useCallback((binding: { type: string; path: string } | null) => {
+        if (pendingWidget) {
+            finishAddWidget(pendingWidget.widget, pendingWidget.layout, binding)
+        }
+        setShowBindingWizard(false)
+        setPendingWidget(null)
+    }, [pendingWidget, finishAddWidget])
+
+    // 绑定向导取消回调
+    const handleBindingCancel = useCallback(() => {
+        // 取消时也添加控件，只是不绑定
+        if (pendingWidget) {
+            finishAddWidget(pendingWidget.widget, pendingWidget.layout, null)
+        }
+        setShowBindingWizard(false)
+        setPendingWidget(null)
+    }, [pendingWidget, finishAddWidget])
 
     // 删除控件
     const handleDeleteWidget = useCallback((widgetId: string) => {
@@ -513,6 +553,16 @@ const DashboardDesigner = ({
                     </div>
                 </div>
             )}
+
+            {/* 变量绑定向导 */}
+            <BindingWizard
+                isOpen={showBindingWizard}
+                widgetType={pendingWidget?.widget.type || ''}
+                widgetTitle={pendingWidget?.widget.title || ''}
+                availableOutputs={availableOutputs}
+                onConfirm={handleBindingConfirm}
+                onCancel={handleBindingCancel}
+            />
         </div>
     )
 }
