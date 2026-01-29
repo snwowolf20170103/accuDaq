@@ -19,6 +19,7 @@ import PropertyPanel from './components/PropertyPanel'
 import Toolbar from './components/Toolbar'
 import DAQNode from './components/DAQNode'
 import NewProjectDialog from './components/NewProjectDialog'
+import SaveProjectDialog from './components/SaveProjectDialog'
 import CodeView from './components/CodeView'
 import { ComponentDefinition, DAQNodeData, DAQProject, DAQWidget, EditorMode } from './types'
 import { v4 as uuidv4 } from 'uuid'
@@ -119,6 +120,7 @@ function App() {
     const [isRunning, setIsRunning] = useState(false)
     const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null)
     const [showNewProjectDialog, setShowNewProjectDialog] = useState(false)
+    const [showSaveDialog, setShowSaveDialog] = useState(false)
     const [projectName, setProjectName] = useState<string>('Untitled Project')
     const [dashboardWidgets, setDashboardWidgets] = useState<DAQWidget[]>([])
     const [dashboardLayout, setDashboardLayout] = useState<any[]>([])
@@ -333,10 +335,11 @@ function App() {
     const [recentProjects, setRecentProjects] = useState<{ fileName: string; name: string; modifiedAt: string }[]>([])
 
     // Save project to file
-    const saveProjectToFile = useCallback(async () => {
+    const saveProjectToFile = useCallback(async (targetName?: string) => {
+        const nameToUse = targetName || projectName
         const project: DAQProject = {
             meta: {
-                name: projectName,
+                name: nameToUse,
                 version: '1.0.0',
                 schemaVersion: '2.0.0',
                 modifiedAt: new Date().toISOString()
@@ -370,10 +373,13 @@ function App() {
             const response = await fetch('/api/project/save', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name: projectName, project })
+                body: JSON.stringify({ name: nameToUse, project })
             })
             const result = await response.json()
             if (response.ok) {
+                if (targetName) {
+                    setProjectName(targetName.replace(/\.daq$/i, ''))
+                }
                 showToast(`项目已保存: ${result.fileName}`, 'success')
             } else {
                 showToast(`保存失败: ${result.error}`, 'error')
@@ -1118,6 +1124,13 @@ function App() {
                 onCreateProject={handleCreateProject}
             />
 
+            <SaveProjectDialog
+                isOpen={showSaveDialog}
+                onClose={() => setShowSaveDialog(false)}
+                onSave={saveProjectToFile}
+                currentName={projectName}
+            />
+
             {/* Top Navigation Bar */}
             <div style={{
                 height: 50,
@@ -1149,7 +1162,7 @@ function App() {
                         + New
                     </button>
                     <button
-                        onClick={saveProjectToFile}
+                        onClick={() => setShowSaveDialog(true)}
                         title="保存项目到文件"
                         style={{
                             background: '#2a2a4a',

@@ -55,6 +55,31 @@ def start_engine():
             return jsonify({"error": str(e)}), 500
 
 
+def kill_process_tree(pid: int):
+    """终止进程及其所有子进程（跨平台）"""
+    import platform
+
+    if platform.system() == 'Windows':
+        # Windows: 使用 taskkill 强制终止进程树
+        try:
+            subprocess.run(
+                ['taskkill', '/F', '/T', '/PID', str(pid)],
+                capture_output=True,
+                timeout=10
+            )
+        except Exception as e:
+            logging.warning(f"taskkill failed: {e}")
+    else:
+        # Unix/Linux/Mac: 使用 SIGKILL
+        import signal
+        try:
+            os.killpg(os.getpgid(pid), signal.SIGKILL)
+        except ProcessLookupError:
+            pass  # 进程已经结束
+        except Exception as e:
+            logging.warning(f"killpg failed: {e}")
+
+
 @app.route('/api/engine/stop', methods=['POST'])
 def stop_engine():
     """停止 DAQ 引擎"""
@@ -69,9 +94,19 @@ def stop_engine():
             return jsonify({"error": "Engine has already stopped"}), 400
 
         try:
-            # 终止进程
-            engine_process.terminate()
-            engine_process.wait(timeout=5)
+            pid = engine_process.pid
+
+            # 使用跨平台的进程树终止方法
+            kill_process_tree(pid)
+
+            # 等待进程结束
+            try:
+                engine_process.wait(timeout=3)
+            except subprocess.TimeoutExpired:
+                # 如果还没结束，强制 kill
+                engine_process.kill()
+                engine_process.wait(timeout=2)
+
             engine_process = None
 
             return jsonify({
@@ -79,16 +114,18 @@ def stop_engine():
                 "message": "DAQ Engine stopped successfully"
             })
 
-        except subprocess.TimeoutExpired:
-            engine_process.kill()
+        except Exception as e:
+            # 确保清理
+            if engine_process:
+                try:
+                    engine_process.kill()
+                except:
+                    pass
             engine_process = None
             return jsonify({
                 "status": "killed",
-                "message": "DAQ Engine killed (timeout)"
+                "message": f"DAQ Engine killed (error: {e})"
             })
-
-        except Exception as e:
-            return jsonify({"error": str(e)}), 500
 
 
 @app.route('/api/engine/status', methods=['GET'])

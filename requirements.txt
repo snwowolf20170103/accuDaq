@@ -1,0 +1,8 @@
+numpy
+pandas
+websockets
+paho-mqtt
+opcua
+pymodbus
+pyserial
+psutil

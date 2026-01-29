@@ -215,8 +215,10 @@ export default defineConfig({
                                     fs.mkdirSync(projectsDir, { recursive: true });
                                 }
 
-                                const sanitizedName = name.replace(/[^a-zA-Z0-9_\-\u4e00-\u9fa5]/g, '_');
-                                const fileName = `${sanitizedName}.daq`;
+                                const sanitizedName = name.replace(/[^a-zA-Z0-9_\-\u4e00-\u9fa5.]/g, '_');
+                                const fileName = sanitizedName.toLowerCase().endsWith('.daq')
+                                    ? sanitizedName
+                                    : `${sanitizedName}.daq`;
                                 const filePath = path.join(projectsDir, fileName);
 
                                 fs.writeFileSync(filePath, JSON.stringify(project, null, 2));
@@ -276,10 +278,13 @@ export default defineConfig({
                                 }
 
                                 const projectName = project.meta?.name || 'Imported_Project';
-                                const sanitizedName = projectName.replace(/[^a-zA-Z0-9_\-\u4e00-\u9fa5]/g, '_');
+                                const sanitizedName = projectName.replace(/[^a-zA-Z0-9_\-\u4e00-\u9fa5.]/g, '_');
 
                                 // Generate unique filename if exists
-                                let fileName = `${sanitizedName}.daq`;
+                                let baseName = sanitizedName.toLowerCase().endsWith('.daq')
+                                    ? sanitizedName
+                                    : `${sanitizedName}.daq`;
+                                let fileName = baseName;
                                 let counter = 1;
                                 while (fs.existsSync(path.join(projectsDir, fileName))) {
                                     fileName = `${sanitizedName}_${counter}.daq`;
@@ -371,8 +376,10 @@ export default defineConfig({
                                     return;
                                 }
 
-                                const sanitizedName = newName.replace(/[^a-zA-Z0-9_\-\u4e00-\u9fa5]/g, '_');
-                                const newFileName = `${sanitizedName}.daq`;
+                                const sanitizedName = newName.replace(/[^a-zA-Z0-9_\-\u4e00-\u9fa5.]/g, '_');
+                                const newFileName = sanitizedName.toLowerCase().endsWith('.daq')
+                                    ? sanitizedName
+                                    : `${sanitizedName}.daq`;
                                 const newPath = path.join(projectsDir, newFileName);
 
                                 if (fs.existsSync(newPath) && oldPath !== newPath) {
@@ -419,8 +426,10 @@ export default defineConfig({
                                     return;
                                 }
 
-                                const sanitizedName = newName.replace(/[^a-zA-Z0-9_\-\u4e00-\u9fa5]/g, '_');
-                                const newFileName = `${sanitizedName}.daq`;
+                                const sanitizedName = newName.replace(/[^a-zA-Z0-9_\-\u4e00-\u9fa5.]/g, '_');
+                                const newFileName = sanitizedName.toLowerCase().endsWith('.daq')
+                                    ? sanitizedName
+                                    : `${sanitizedName}.daq`;
                                 const newPath = path.join(projectsDir, newFileName);
 
                                 if (fs.existsSync(newPath)) {

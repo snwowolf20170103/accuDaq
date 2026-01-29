@@ -5,7 +5,7 @@ import DebugOverlay from './DebugOverlay'
 
 const DAQNode = ({ id, data, selected }: NodeProps) => {
     const nodeData = data as unknown as DAQNodeData
-    
+
     // Debug props from nodeData (passed from App.tsx)
     const debugMode = nodeData.debugMode || false
     const isExecuting = nodeData.isExecuting || false
@@ -26,14 +26,17 @@ const DAQNode = ({ id, data, selected }: NodeProps) => {
             <div className="daq-node-body">
                 <div className="daq-node-ports">
                     <div className="daq-ports-left">
-                        {nodeData.inputs.map((input, index) => (
-                            <div key={input.id} className="daq-port">
+                        {nodeData.inputs.map((input) => (
+                            <div key={input.id} className="daq-port" style={{ position: 'relative' }}>
                                 <Handle
                                     type="target"
                                     position={Position.Left}
                                     id={input.id}
                                     style={{
-                                        top: `${35 + index * 25}%`,
+                                        position: 'absolute',
+                                        top: '50%',
+                                        left: -5,
+                                        transform: 'translateY(-50%)',
                                         background: '#4a90d9',
                                         width: 10,
                                         height: 10,
@@ -46,15 +49,18 @@ const DAQNode = ({ id, data, selected }: NodeProps) => {
                     </div>
 
                     <div className="daq-ports-right">
-                        {nodeData.outputs.map((output, index) => (
-                            <div key={output.id} className="daq-port" style={{ justifyContent: 'flex-end' }}>
+                        {nodeData.outputs.map((output) => (
+                            <div key={output.id} className="daq-port" style={{ justifyContent: 'flex-end', position: 'relative' }}>
                                 <span style={{ marginRight: 12 }}>{output.name}</span>
                                 <Handle
                                     type="source"
                                     position={Position.Right}
                                     id={output.id}
                                     style={{
-                                        top: `${35 + index * 25}%`,
+                                        position: 'absolute',
+                                        top: '50%',
+                                        right: -5,
+                                        transform: 'translateY(-50%)',
                                         background: '#27ae60',
                                         width: 10,
                                         height: 10,
@@ -74,7 +80,7 @@ const DAQNode = ({ id, data, selected }: NodeProps) => {
                     isExecuting={isExecuting}
                     portValues={portValues}
                     hasBreakpoint={hasBreakpoint}
-                    onToggleBreakpoint={onToggleBreakpoint || (() => {})}
+                    onToggleBreakpoint={onToggleBreakpoint || (() => { })}
                 />
             )}
         </div>

@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <title>MQTT over WebSocket - 标准方案演示</title>
+    <!-- 从 CDN 引入 mqtt.js 库 -->
+    <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 30px;
+            color: #fff;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .subtitle {
+            text-align: center;
+            margin-bottom: 30px;
+            opacity: 0.9;
+            font-size: 1.1em;
+        }
+
+        .connection-panel {
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(10px);
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .connection-status {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            font-size: 1.2em;
+        }
+
+        .status-dot {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: #ffc107;
+            box-shadow: 0 0 15px currentColor;
+            animation: pulse 2s infinite;
+        }
+
+        .status-dot.connected {
+            background: #4caf50;
+            color: #4caf50;
+        }
+
+        .status-dot.disconnected {
+            background: #f44336;
+            color: #f44336;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.5;
+            }
+        }
+
+        .info-box {
+            background: rgba(0, 0, 0, 0.2);
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 15px;
+            font-size: 14px;
+            font-family: monospace;
+        }
+
+        .info-box .label {
+            color: #ffc107;
+            font-weight: bold;
+        }
+
+        .topics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+            gap: 24px;
+            margin-top: 30px;
+        }
+
+        .topic-card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 16px;
+            padding: 24px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            transition: transform 0.2s;
+        }
+
+        .topic-card:hover {
+            transform: translateY(-4px);
+        }
+
+        .topic-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .topic-icon {
+            font-size: 2em;
+        }
+
+        .topic-name {
+            flex: 1;
+        }
+
+        .topic-name h3 {
+            font-size: 1.4em;
+            margin-bottom: 4px;
+        }
+
+        .topic-path {
+            font-family: monospace;
+            font-size: 13px;
+            opacity: 0.8;
+            background: rgba(0, 0, 0, 0.2);
+            padding: 4px 8px;
+            border-radius: 4px;
+        }
+
+        .message-count {
+            background: rgba(76, 175, 80, 0.3);
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: bold;
+        }
+
+        .latest-data {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 16px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            max-height: 300px;
+            overflow-y: auto;
+            margin-top: 12px;
+        }
+
+        .latest-data pre {
+            margin: 0;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            color: #4ade80;
+        }
+
+        .no-data {
+            color: #94a3b8;
+            font-style: italic;
+        }
+
+        .timestamp {
+            color: #ffc107;
+            font-size: 11px;
+            margin-bottom: 8px;
+        }
+
+        .code-example {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 12px;
+            padding: 20px;
+            margin-top: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .code-example h3 {
+            color: #4fc3f7;
+            margin-bottom: 12px;
+        }
+
+        .code-example pre {
+            background: #1e1e1e;
+            padding: 16px;
+            border-radius: 8px;
+            overflow-x: auto;
+            font-size: 13px;
+            line-height: 1.6;
+        }
+
+        .code-example code {
+            color: #d4d4d4;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>🚀 MQTT over WebSocket</h1>
+        <div class="subtitle">单个连接 + 多主题订阅 - 标准方案演示</div>
+
+        <!-- 连接状态面板 -->
+        <div class="connection-panel">
+            <div class="connection-status">
+                <div class="status-dot" id="status-dot"></div>
+                <div>
+                    <strong id="status-text">正在连接...</strong>
+                    <div style="font-size: 0.85em; opacity: 0.8; margin-top: 4px;" id="status-detail">
+                        初始化 MQTT 客户端
+                    </div>
+                </div>
+            </div>
+            <div class="info-box">
+                <div><span class="label">WebSocket 地址:</span> ws://localhost:8083/mqtt</div>
+                <div><span class="label">订阅主题:</span> modbus/data, sensor/sine_wave, opcUa/data</div>
+                <div><span class="label">使用库:</span> mqtt.js (from CDN)</div>
+                <div><span class="label">优势:</span> ✅ 单连接 ✅ 标准协议 ✅ 灵活订阅 ✅ 高性能</div>
+            </div>
+        </div>
+
+        <!-- 主题数据展示 -->
+        <div class="topics-grid">
+            <!-- Modbus 数据 -->
+            <div class="topic-card">
+                <div class="topic-header">
+                    <div class="topic-icon">⚡</div>
+                    <div class="topic-name">
+                        <h3>Modbus TCP 数据</h3>
+                        <div class="topic-path">modbus/data</div>
+                    </div>
+                    <div class="message-count" id="count-modbus">0 条消息</div>
+                </div>
+                <div class="latest-data">
+                    <div class="no-data" id="data-modbus">等待数据...</div>
+                </div>
+            </div>
+
+            <!-- 正弦波数据 -->
+            <div class="topic-card">
+                <div class="topic-header">
+                    <div class="topic-icon">📈</div>
+                    <div class="topic-name">
+                        <h3>正弦波模拟数据</h3>
+                        <div class="topic-path">sensor/sine_wave</div>
+                    </div>
+                    <div class="message-count" id="count-sine">0 条消息</div>
+                </div>
+                <div class="latest-data">
+                    <div class="no-data" id="data-sine">等待数据...</div>
+                </div>
+            </div>
+
+            <!-- OPC UA 数据 -->
+            <div class="topic-card" style="border-color: rgba(255, 193, 7, 0.5);">
+                <div class="topic-header">
+                    <div class="topic-icon">🏭</div>
+                    <div class="topic-name">
+                        <h3>OPC UA 数据</h3>
+                        <div class="topic-path">opcua/#</div>
+                    </div>
+                    <div class="message-count" id="count-opcua">0 条消息</div>
+                </div>
+                <div class="latest-data">
+                    <div class="no-data" id="data-opcua">等待数据... (需启动 OPC UA 模拟器)</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 代码示例 -->
+        <div class="code-example">
+            <h3>💻 前端集成代码示例（第三方参考）</h3>
+            <pre><code>// 1. 引入 mqtt.js 库
+import mqtt from 'mqtt';  // 或使用 CDN: &lt;script src="https://unpkg.com/mqtt/dist/mqtt.min.js"&gt;&lt;/script&gt;
+
+// 2. 连接到 MQTT Broker (单个连接)
+const client = mqtt.connect('ws://localhost:8083/mqtt');
+
+// 3. 监听连接成功事件
+client.on('connect', () => {
+    console.log('已连接到 MQTT Broker');
+    
+    // 4. 订阅多个主题（同一个连接内）
+    client.subscribe('modbus/data');        // Modbus 设备数据
+    client.subscribe('sensor/sine_wave');   // 模拟传感器数据
+    client.subscribe('opcua/#');            // OPC UA 数据 (通配符)
+    // 可以继续添加更多主题..
+});
+
+// 5. 监听消息（所有订阅的主题都通过这个回调）
+client.on('message', (topic, message) => {
+    const data = JSON.parse(message.toString());
+    
+    // 6. 根据主题区分处理
+    if (topic === 'modbus/data') {
+        console.log('Modbus 数据:', data);
+    } else if (topic === 'sensor/sine_wave') {
+        console.log('传感器数据:', data);
+    } else if (topic.startsWith('opcua/')) {
+        console.log('OPC UA 数据:', data);
+    }
+});
+
+// 7. 错误处理
+client.on('error', (err) => {
+    console.error('MQTT 错误:', err);
+});</code></pre>
+        </div>
+    </div>
+
+    <script>
+        // ========== MQTT 客户端初始化 ==========
+        const BROKER_URL = 'ws://localhost:8083/mqtt';
+        const TOPICS = {
+            modbus: 'modbus/data',
+            sine: 'sensor/sine_wave',
+            opcData: 'opcUa/data'    // OPC UA 数据主题
+        };
+
+        // 消息计数器
+        const messageCount = {
+            modbus: 0,
+            sine: 0,
+            opcua: 0
+        };
+
+        // UI 元素
+        const statusDot = document.getElementById('status-dot');
+        const statusText = document.getElementById('status-text');
+        const statusDetail = document.getElementById('status-detail');
+
+        // 创建 MQTT 客户端（单个连接）
+        console.log('正在连接到 MQTT Broker:', BROKER_URL);
+        const client = mqtt.connect(BROKER_URL);
+
+        // ========== 连接事件处理 ==========
+        client.on('connect', () => {
+            console.log('✅ 已连接到 MQTT Broker');
+            statusDot.className = 'status-dot connected';
+            statusText.textContent = '✅ 已连接';
+            statusDetail.textContent = `已连接到 ${BROKER_URL}，正在订阅主题...`;
+
+            // 订阅多个主题（在同一个连接内）
+            Object.values(TOPICS).forEach(topic => {
+                client.subscribe(topic, (err) => {
+                    if (!err) {
+                        console.log(`✅ 已订阅主题: ${topic}`);
+                    } else {
+                        console.error(`❌ 订阅失败: ${topic}`, err);
+                    }
+                });
+            });
+
+            statusDetail.textContent = `已订阅 ${Object.keys(TOPICS).length} 个主题，等待数据...`;
+        });
+
+        // ========== 消息接收处理 ==========
+        client.on('message', (topic, message) => {
+            try {
+                const data = JSON.parse(message.toString());
+                console.log(`📨 收到消息 [${topic}]:`, data);
+
+                // 根据主题分发到不同的处理函数
+                if (topic === TOPICS.modbus) {
+                    handleModbusData(data);
+                } else if (topic === TOPICS.sine) {
+                    handleSineData(data);
+                } else if (topic === 'opcUa/data') {
+                    handleOpcuaData(topic, data);
+                }
+
+            } catch (e) {
+                console.error('消息解析错误:', e);
+            }
+        });
+
+        // ========== 错误处理 ==========
+        client.on('error', (err) => {
+            console.error('❌ MQTT 错误:', err);
+            statusDot.className = 'status-dot disconnected';
+            statusText.textContent = '❌ 连接错误';
+            statusDetail.textContent = err.message;
+        });
+
+        client.on('close', () => {
+            console.log('⚠️ 连接已断开');
+            statusDot.className = 'status-dot disconnected';
+            statusText.textContent = '⚠️ 连接断开';
+            statusDetail.textContent = '尝试重新连接...';
+        });
+
+        // ========== 数据处理函数 ==========
+        function handleModbusData(data) {
+            messageCount.modbus++;
+            document.getElementById('count-modbus').textContent = `${messageCount.modbus} 条消息`;
+
+            const container = document.getElementById('data-modbus');
+            const timestamp = new Date().toLocaleTimeString('zh-CN', { hour12: false });
+
+            container.innerHTML = `
+                <div class="timestamp">⏱️ ${timestamp}</div>
+                <pre>${JSON.stringify(data, null, 2)}</pre>
+            `;
+        }
+
+        function handleSineData(data) {
+            messageCount.sine++;
+            document.getElementById('count-sine').textContent = `${messageCount.sine} 条消息`;
+
+            const container = document.getElementById('data-sine');
+            const timestamp = new Date().toLocaleTimeString('zh-CN', { hour12: false });
+
+            container.innerHTML = `
+                <div class="timestamp">⏱️ ${timestamp}</div>
+                <pre>${JSON.stringify(data, null, 2)}</pre>
+            `;
+        }
+
+        function handleOpcuaData(topic, data) {
+            messageCount.opcua++;
+            document.getElementById('count-opcua').textContent = `${messageCount.opcua} 条消息`;
+
+            const container = document.getElementById('data-opcua');
+            const timestamp = new Date().toLocaleTimeString('zh-CN', { hour12: false });
+
+            container.innerHTML = `
+                <div class="timestamp">⏱️ ${timestamp} | 主题: ${topic}</div>
+                <pre>${JSON.stringify(data, null, 2)}</pre>
+            `;
+        }
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <title>WebSocket 数据桥接测试 - Modbus & Sine Wave</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            color: #fff;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+            font-size: 2.5em;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+            gap: 24px;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 28px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            transition: transform 0.2s;
+        }
+
+        .card:hover {
+            transform: translateY(-4px);
+        }
+
+        .card h2 {
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 1.8em;
+        }
+
+        .status {
+            display: inline-block;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+            box-shadow: 0 0 10px currentColor;
+        }
+
+        .status.connected {
+            background: #4ade80;
+            color: #4ade80;
+        }
+
+        .status.disconnected {
+            background: #ef4444;
+            color: #ef4444;
+        }
+
+        .status.connecting {
+            background: #fbbf24;
+            color: #fbbf24;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+
+            50% {
+                opacity: 0.6;
+                transform: scale(1.1);
+            }
+        }
+
+        .endpoint {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 10px 14px;
+            border-radius: 8px;
+            font-size: 13px;
+            margin-bottom: 16px;
+            font-family: 'Courier New', monospace;
+        }
+
+        .endpoint-label {
+            color: #94a3b8;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .data-display {
+            background: rgba(0, 0, 0, 0.4);
+            border-radius: 12px;
+            padding: 20px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            max-height: 500px;
+            overflow-y: auto;
+            margin-top: 12px;
+        }
+
+        .data-display::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .data-display::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+        }
+
+        .data-display::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 4px;
+        }
+
+        .data-item {
+            padding: 12px;
+            margin-bottom: 10px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            border-left: 4px solid #4ade80;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(-20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .timestamp {
+            color: #94a3b8;
+            font-size: 11px;
+            margin-bottom: 6px;
+        }
+
+        .topic {
+            color: #fbbf24;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+
+        .value {
+            color: #4ade80;
+            line-height: 1.6;
+        }
+
+        .value pre {
+            margin: 0;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        .error {
+            color: #ef4444;
+            border-left-color: #ef4444;
+        }
+
+        .info {
+            background: rgba(255, 255, 255, 0.15);
+            padding: 16px 20px;
+            border-radius: 12px;
+            margin-bottom: 24px;
+            font-size: 14px;
+            border-left: 4px solid #fbbf24;
+        }
+
+        .info code {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-family: monospace;
+            color: #fbbf24;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>🌐 WebSocket 数据桥接测试</h1>
+
+        <div class="info">
+            <strong>📡 正在测试:</strong> Modbus TCP 数据 + MQTT 正弦波模拟数据
+            <br><br>
+            <strong>🔧 桥接服务:</strong> <code>ws://localhost:9000</code>
+            <br>
+            <strong>📊 数据源:</strong>
+            <code>modbus/data</code> (Modbus 模拟器) +
+            <code>sensor/sine_wave</code> (MQTT 模拟器)
+        </div>
+
+        <div class="grid">
+            <!-- Modbus 数据 -->
+            <div class="card">
+                <h2>
+                    <span class="status connecting" id="modbus-status"></span>
+                    ⚡ Modbus TCP 数据
+                </h2>
+                <div class="endpoint">
+                    <div class="endpoint-label">WebSocket 端点</div>
+                    <div>ws://localhost:9000/modbus</div>
+                </div>
+                <div class="endpoint">
+                    <div class="endpoint-label">MQTT 主题</div>
+                    <div>modbus/data</div>
+                </div>
+                <div class="data-display" id="modbus-data">等待数据...</div>
+            </div>
+
+            <!-- 正弦波模拟数据 -->
+            <div class="card">
+                <h2>
+                    <span class="status connecting" id="sine-status"></span>
+                    📈 正弦波模拟数据
+                </h2>
+                <div class="endpoint">
+                    <div class="endpoint-label">WebSocket 端点</div>
+                    <div>ws://localhost:9000/sine_wave</div>
+                </div>
+                <div class="endpoint">
+                    <div class="endpoint-label">MQTT 主题</div>
+                    <div>sensor/sine_wave</div>
+                </div>
+                <div class="data-display" id="sine-data">等待数据...</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 创建 WebSocket 连接并监听数据
+        function createConnection(url, statusId, dataId, maxMessages = 10) {
+            const statusEl = document.getElementById(statusId);
+            const dataEl = document.getElementById(dataId);
+            const messages = [];
+
+            try {
+                const ws = new WebSocket(url);
+
+                ws.onopen = () => {
+                    statusEl.className = 'status connected';
+                    addMessage(dataEl, messages, {
+                        type: 'info',
+                        content: `✅ 已连接到 ${url}`
+                    });
+                };
+
+                ws.onmessage = (event) => {
+                    try {
+                        const data = JSON.parse(event.data);
+
+                        if (data.type === 'welcome') {
+                            addMessage(dataEl, messages, {
+                                type: 'info',
+                                content: data.message
+                            });
+                        } else if (data.topic) {
+                            addMessage(dataEl, messages, {
+                                type: 'data',
+                                topic: data.topic,
+                                data: data.data,
+                                timestamp: data.timestamp
+                            }, maxMessages);
+                        }
+                    } catch (e) {
+                        console.error('数据解析错误:', e);
+                    }
+                };
+
+                ws.onerror = (error) => {
+                    statusEl.className = 'status disconnected';
+                    addMessage(dataEl, messages, {
+                        type: 'error',
+                        content: `❌ 连接错误`
+                    });
+                };
+
+                ws.onclose = () => {
+                    statusEl.className = 'status disconnected';
+                    addMessage(dataEl, messages, {
+                        type: 'error',
+                        content: '⚠️ 连接已断开'
+                    });
+                };
+
+            } catch (e) {
+                statusEl.className = 'status disconnected';
+                addMessage(dataEl, messages, {
+                    type: 'error',
+                    content: `❌ 无法创建连接: ${e.message}`
+                });
+            }
+        }
+
+        function addMessage(container, messages, msg, maxMessages = 10) {
+            const div = document.createElement('div');
+            div.className = msg.type === 'error' ? 'data-item error' : 'data-item';
+
+            if (msg.type === 'data') {
+                const time = new Date(msg.timestamp).toLocaleTimeString('zh-CN', {
+                    hour12: false,
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit',
+                    fractionalSecondDigits: 1
+                });
+                const dataStr = typeof msg.data === 'object'
+                    ? JSON.stringify(msg.data, null, 2)
+                    : msg.data;
+
+                div.innerHTML = `
+                    <div class="timestamp">⏱️ ${time}</div>
+                    <div class="topic">📍 ${msg.topic}</div>
+                    <div class="value"><pre>${dataStr}</pre></div>
+                `;
+            } else {
+                div.textContent = msg.content;
+            }
+
+            // 插入到最前面
+            if (container.firstChild && container.firstChild.textContent !== '等待数据...') {
+                container.insertBefore(div, container.firstChild);
+            } else {
+                container.innerHTML = '';
+                container.appendChild(div);
+            }
+
+            // 限制消息数量
+            messages.push(div);
+            if (messages.length > maxMessages) {
+                const removed = messages.shift();
+                if (removed && removed.parentNode) {
+                    removed.parentNode.removeChild(removed);
+                }
+            }
+        }
+
+        // 启动连接
+        console.log('正在连接到 WebSocket 数据桥接服务...');
+        createConnection('ws://localhost:9000/modbus', 'modbus-status', 'modbus-data', 8);
+        createConnection('ws://localhost:9000/sine_wave', 'sine-status', 'sine-data', 8);
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>MQTT WebSocket Test</title>
+    <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+    <style>
+        body { font-family: sans-serif; padding: 20px; background: #333; color: #fff; }
+        .status { padding: 10px; border-radius: 4px; display: inline-block; margin-bottom: 20px; }
+        .success { background: #4caf50; }
+        .error { background: #f44336; }
+        .pending { background: #ff9800; }
+        #messages { background: #222; padding: 10px; height: 300px; overflow: auto; font-family: monospace; border: 1px solid #444; }
+    </style>
+</head>
+<body>
+    <h2>MQTT WebSocket 验证工具</h2>
+    
+    <div>
+        <strong>目标地址:</strong> <span id="url">ws://localhost:8083/mqtt</span>
+    </div>
+    <br>
+    
+    <div id="status" class="status pending">正在连接...</div>
+    
+    <h3>接收到的消息:</h3>
+    <div id="messages"></div>
+
+    <script>
+        const url = 'ws://localhost:8083/mqtt';
+        const statusEl = document.getElementById('status');
+        const msgEl = document.getElementById('messages');
+        let count = 0;
+
+        function log(msg, type = 'info') {
+            const line = document.createElement('div');
+            line.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+            line.style.color = type === 'error' ? '#ff6b6b' : '#eee';
+            msgEl.prepend(line);
+        }
+
+        try {
+            log(`尝试连接到 ${url}...`);
+            const client = mqtt.connect(url);
+
+            client.on('connect', () => {
+                statusEl.textContent = "✅ 连接成功 (Connected)";
+                statusEl.className = "status success";
+                log("已连接到 Broker!");
+                
+                // 订阅所有主题
+                client.subscribe('#', (err) => {
+                    if (!err) log("已订阅所有主题 (#)");
+                });
+            });
+
+            client.on('message', (topic, message) => {
+                count++;
+                if (count < 20) { // 防止刷屏
+                    log(`收到 [${topic}]: ${message.toString().substring(0, 100)}...`);
+                }
+            });
+
+            client.on('error', (err) => {
+                statusEl.textContent = `❌ 连接错误: ${err.message}`;
+                statusEl.className = "status error";
+                log(`连接错误: ${err.message}`, 'error');
+            });
+
+            client.on('close', () => {
+                if (statusEl.className.includes('success')) {
+                    statusEl.textContent = "⚠️ 连接已断开";
+                    statusEl.className = "status pending";
+                    log("连接已断开");
+                }
+            });
+
+        } catch (e) {
+            statusEl.textContent = `❌ 初始化错误: ${e.message}`;
+            statusEl.className = "status error";
+            log(`错误: ${e.message}`, 'error');
+        }
+    </script>
+</body>
+</html>

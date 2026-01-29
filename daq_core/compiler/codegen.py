@@ -19,7 +19,7 @@ NODE_TYPE_MAPPING = {
     "daq:mock_device": "MockDevice",
     "daq:mqtt_subscribe": "MQTTSubscriber",
     "daq:mqtt_publish": "MQTTPublisher",
-    "daq:modbus_tcp": "ModbusClient",  # 新增 - Modbus TCP 客户端
+    "daq:modbus_tcp": "ModbusTCPClient",  # Modbus TCP 客户端（增强版）
 
     # 逻辑组件
     "daq:math": "MathOperation",
@@ -48,16 +48,37 @@ NODE_TYPE_MAPPING = {
     "daq:ethercat_master": "EtherCATMaster",
     "daq:ethercat_slave_io": "EtherCATSlaveIO",
 
+
+    # 复杂协议组件 - EtherCAT
+    "daq:ethercat_master": "EtherCATMaster",
+    "daq:ethercat_slave_io": "EtherCATSlaveIO",
+    "ethercat_master": "EtherCATMaster",
+    "ethercat_slave_io": "EtherCATSlaveIO",
+
     # 复杂协议组件 - CANopen
     "daq:canopen_master": "CANopenMaster",
     "daq:canopen_node": "CANopenNode",
     "daq:canopen_pdo": "CANopenPDO",
+    # 前端类型别名
+    "canopen_master": "CANopenMaster",
+    "canopen_node": "CANopenNode",
+    "canopen_pdo": "CANopenPDO",
 
     # 复杂协议组件 - OPC UA
     "daq:opcua_client": "OPCUAClient",
     "daq:opcua_node_reader": "OPCUANodeReader",
     "daq:opcua_node_writer": "OPCUANodeWriter",
     "daq:opcua_subscription": "OPCUASubscription",
+    # 前端类型别名（带下划线）
+    "opc_ua_client": "OPCUAClient",
+    "opc_ua_reader": "OPCUANodeReader",
+    "opc_ua_writer": "OPCUANodeWriter",
+    "opc_ua_subscription": "OPCUASubscription",
+    # daq 前缀 + 下划线版本
+    "daq:opc_ua_client": "OPCUAClient",
+    "daq:opc_ua_reader": "OPCUANodeReader",
+    "daq:opc_ua_writer": "OPCUANodeWriter",
+    "daq:opc_ua_subscription": "OPCUASubscription",
 
     # FPGA 组件
     "daq:fpga_device": "FPGADevice",
@@ -67,6 +88,37 @@ NODE_TYPE_MAPPING = {
     "daq:fpga_dac": "FPGADAC",
     "daq:fpga_dma": "FPGADMA",
     "daq:fpga_pwm": "FPGAPWM",
+
+    # 电力协议组件 - IEC 61850
+    "iec61850_client": "IEC61850Client",
+    "iec61850_data_reader": "IEC61850DataReader",
+    "iec61850_goose": "IEC61850GOOSE",
+    
+    # 电力协议组件 - IEC 60870-5-104
+    "iec104_client": "IEC104Client",
+    "iec104_data_point": "IEC104DataPoint",
+    
+    # 电力协议组件 - IEC 60870-5-101
+    "iec101_master": "IEC101Master",
+    
+    # 电力协议组件 - IEC 60870-5-103
+    "iec103_master": "IEC103Master",
+    
+    # 电力协议组件 - DNP3
+    "dnp3_master": "DNP3Master",
+    "dnp3_data_point": "DNP3DataPoint",
+    
+    # 工厂自动化协议 - Profibus
+    "profibus_master": "ProfibusMaster",
+    "profibus_slave": "ProfibusSlave",
+    
+    # 工厂自动化协议 - Profinet
+    "profinet_controller": "ProfinetController",
+    "profinet_device": "ProfinetDevice",
+    
+    # 楼宇自动化协议 - BACnet
+    "bacnet_client": "BACnetClient",
+    "bacnet_object": "BACnetObject",
 }
 
 

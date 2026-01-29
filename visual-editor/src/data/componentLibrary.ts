@@ -333,6 +333,185 @@ export const componentLibrary: ComponentDefinition[] = [
         ]
     },
 
+    // ============ OPC UA Components ============
+
+    // OPC UA Client Component
+    {
+        type: 'opc_ua_client',
+        name: 'OPC UA Client',
+        category: 'device',
+        icon: '🏭',
+        description: 'Connect to OPC UA Server',
+        inputs: [
+            { id: 'enable', name: 'Enable', type: 'boolean' },
+        ],
+        outputs: [
+            { id: 'client_ref', name: 'Client Ref', type: 'any' },  // 组件引用，连接到 Reader
+            { id: 'connected', name: 'Connected', type: 'boolean' },
+            { id: 'server_state', name: 'Server State', type: 'string' },
+            { id: 'namespace_array', name: 'Namespaces', type: 'array' },
+            { id: 'error', name: 'Error', type: 'string' },
+        ],
+        defaultProperties: {
+            endpoint: 'opc.tcp://localhost:4840',
+            username: '',
+            password: '',
+            security_policy: '',
+            auto_reconnect: true,
+            reconnect_interval: 5,
+        },
+        propertySchema: [
+            { key: 'endpoint', label: 'Endpoint URL', type: 'string' },
+            { key: 'username', label: 'Username', type: 'string' },
+            { key: 'password', label: 'Password', type: 'string' },
+            {
+                key: 'security_policy', label: 'Security Policy', type: 'select', options: [
+                    { value: '', label: 'None' },
+                    { value: 'Basic256Sha256', label: 'Basic256Sha256' },
+                    { value: 'Basic128Rsa15', label: 'Basic128Rsa15' },
+                ]
+            },
+            { key: 'auto_reconnect', label: 'Auto Reconnect', type: 'boolean' },
+            { key: 'reconnect_interval', label: 'Reconnect Interval (s)', type: 'number' },
+        ]
+    },
+
+    // OPC UA Node Reader Component
+    {
+        type: 'opc_ua_reader',
+        name: 'OPC UA Reader',
+        category: 'device',
+        icon: '📖',
+        description: 'Read OPC UA node values with MQTT forwarding',
+        inputs: [
+            { id: 'client', name: 'Client', type: 'any' },
+        ],
+        outputs: [
+            { id: 'value', name: 'Value', type: 'any' },
+            { id: 'quality', name: 'Quality', type: 'string' },
+            { id: 'timestamp', name: 'Timestamp', type: 'string' },
+            { id: 'raw_data', name: 'Raw Data', type: 'object' },
+        ],
+        defaultProperties: {
+            node_id: 'ns=2;i=1',
+            poll_interval_ms: 1000,
+            data_type: 'auto',
+            mqtt_enabled: false,
+            mqtt_broker: 'localhost',
+            mqtt_port: 1883,
+            mqtt_topic: 'opcua/data',
+        },
+        propertySchema: [
+            { key: 'node_id', label: 'Node ID', type: 'string' },
+            { key: 'poll_interval_ms', label: 'Poll Interval (ms)', type: 'number' },
+            {
+                key: 'data_type', label: 'Data Type', type: 'select', options: [
+                    { value: 'auto', label: 'Auto' },
+                    { value: 'float', label: 'Float' },
+                    { value: 'int', label: 'Integer' },
+                    { value: 'string', label: 'String' },
+                    { value: 'bool', label: 'Boolean' },
+                ]
+            },
+            { key: 'mqtt_enabled', label: 'MQTT Forwarding', type: 'boolean' },
+            { key: 'mqtt_broker', label: 'MQTT Broker', type: 'string' },
+            { key: 'mqtt_port', label: 'MQTT Port', type: 'number' },
+            { key: 'mqtt_topic', label: 'MQTT Topic', type: 'string' },
+        ]
+    },
+
+    // OPC UA Node Writer Component
+    {
+        type: 'opc_ua_writer',
+        name: 'OPC UA Writer',
+        category: 'device',
+        icon: '✏️',
+        description: 'Write values to OPC UA nodes',
+        inputs: [
+            { id: 'client', name: 'Client', type: 'any' },
+            { id: 'value', name: 'Value', type: 'any' },
+            { id: 'trigger', name: 'Trigger', type: 'boolean' },
+        ],
+        outputs: [
+            { id: 'success', name: 'Success', type: 'boolean' },
+            { id: 'error', name: 'Error', type: 'string' },
+        ],
+        defaultProperties: {
+            node_id: 'ns=2;i=1',
+            data_type: 'auto',
+        },
+        propertySchema: [
+            { key: 'node_id', label: 'Node ID', type: 'string' },
+            {
+                key: 'data_type', label: 'Data Type', type: 'select', options: [
+                    { value: 'auto', label: 'Auto' },
+                    { value: 'float', label: 'Float' },
+                    { value: 'int', label: 'Integer' },
+                    { value: 'string', label: 'String' },
+                    { value: 'bool', label: 'Boolean' },
+                ]
+            },
+        ]
+    },
+
+    // OPC UA Subscription Component
+    {
+        type: 'opc_ua_subscription',
+        name: 'OPC UA Subscription',
+        category: 'device',
+        icon: '🔔',
+        description: 'Subscribe to OPC UA node changes with MQTT forwarding',
+        inputs: [
+            { id: 'client', name: 'Client', type: 'any' },
+        ],
+        outputs: [
+            { id: 'values', name: 'Values', type: 'object' },
+            { id: 'last_value', name: 'Last Value', type: 'number' },
+            { id: 'changed', name: 'Changed', type: 'boolean' },
+            { id: 'change_count', name: 'Change Count', type: 'number' },
+        ],
+        defaultProperties: {
+            node_ids: ['ns=2;i=1'],
+            publish_interval_ms: 500,
+            mqtt_enabled: false,
+            mqtt_broker: 'localhost',
+            mqtt_port: 1883,
+            mqtt_topic: 'opcua/subscription',
+        },
+        propertySchema: [
+            { key: 'node_ids', label: 'Node IDs (comma separated)', type: 'string' },
+            { key: 'publish_interval_ms', label: 'Publish Interval (ms)', type: 'number' },
+            { key: 'mqtt_enabled', label: 'MQTT Forwarding', type: 'boolean' },
+            { key: 'mqtt_broker', label: 'MQTT Broker', type: 'string' },
+            { key: 'mqtt_port', label: 'MQTT Port', type: 'number' },
+            { key: 'mqtt_topic', label: 'MQTT Topic', type: 'string' },
+        ]
+    },
+
+    // MQTT Broker Component
+    {
+        type: 'mqtt_broker',
+        name: 'MQTT Broker',
+        category: 'comm',
+        icon: '📶',
+        description: 'Start a local MQTT Broker',
+        inputs: [],
+        outputs: [
+            { id: 'status', name: 'Status', type: 'string' },
+            { id: 'client_count', name: 'Clients', type: 'number' },
+        ],
+        defaultProperties: {
+            port: 1883,
+            ws_port: 8083,
+            auto_start: true,
+        },
+        propertySchema: [
+            { key: 'port', label: 'TCP Port', type: 'number' },
+            { key: 'ws_port', label: 'WebSocket Port', type: 'number' },
+            { key: 'auto_start', label: 'Auto Start', type: 'boolean' },
+        ]
+    },
+
     // Communication Components
     {
         type: 'mqtt_subscribe',
@@ -662,32 +841,51 @@ export const componentLibrary: ComponentDefinition[] = [
         ]
     },
 
-    // 新增组件 - Modbus TCP
+    // 新增组件 - Modbus TCP (增强版)
     {
         type: 'modbus_tcp',
         name: 'Modbus TCP',
         category: 'device',
         icon: '🏭',
-        description: 'Read from Modbus TCP device',
-        inputs: [],
+        description: 'Modbus TCP 客户端，支持轮询和 MQTT 推送',
+        inputs: [
+            { id: 'write_value', name: 'Write Value', type: 'number' },
+            { id: 'write_trigger', name: 'Write Trigger', type: 'boolean' },
+        ],
         outputs: [
             { id: 'value', name: 'Value', type: 'number' },
+            { id: 'values', name: 'Values', type: 'array' },
+            { id: 'data', name: 'Data', type: 'object' },
             { id: 'connected', name: 'Connected', type: 'boolean' },
+            { id: 'error', name: 'Error', type: 'string' },
         ],
         defaultProperties: {
             host: '127.0.0.1',
             port: 502,
-            register: 0,
-            count: 1,
             slave_id: 1,
+            register_address: 0,
+            register_count: 6,
+            register_type: 'holding',
             data_type: 'uint16',
+            poll_interval_ms: 1000,
+            auto_reconnect: true,
+            mqtt_enabled: false,
+            mqtt_broker: 'localhost',
+            mqtt_port: 1883,
+            mqtt_topic: 'modbus/data',
         },
         propertySchema: [
             { key: 'host', label: 'Host', type: 'string' },
             { key: 'port', label: 'Port', type: 'number' },
-            { key: 'register', label: 'Register Address', type: 'number' },
-            { key: 'count', label: 'Register Count', type: 'number' },
             { key: 'slave_id', label: 'Slave ID', type: 'number' },
+            { key: 'register_address', label: 'Register Address', type: 'number' },
+            { key: 'register_count', label: 'Register Count', type: 'number' },
+            {
+                key: 'register_type', label: 'Register Type', type: 'select', options: [
+                    { value: 'holding', label: 'Holding Registers' },
+                    { value: 'input', label: 'Input Registers' },
+                ]
+            },
             {
                 key: 'data_type', label: 'Data Type', type: 'select', options: [
                     { value: 'uint16', label: 'Unsigned Int 16' },
@@ -695,6 +893,12 @@ export const componentLibrary: ComponentDefinition[] = [
                     { value: 'float32', label: 'Float 32' },
                 ]
             },
+            { key: 'poll_interval_ms', label: 'Poll Interval (ms)', type: 'number' },
+            { key: 'auto_reconnect', label: 'Auto Reconnect', type: 'boolean' },
+            { key: 'mqtt_enabled', label: 'Enable MQTT Forward', type: 'boolean' },
+            { key: 'mqtt_broker', label: 'MQTT Broker', type: 'string' },
+            { key: 'mqtt_port', label: 'MQTT Port', type: 'number' },
+            { key: 'mqtt_topic', label: 'MQTT Topic', type: 'string' },
         ]
     },
 
@@ -1136,6 +1340,7 @@ export const componentLibrary: ComponentDefinition[] = [
             { id: 'enable', name: 'Enable', type: 'boolean' },
         ],
         outputs: [
+            { id: 'master_ref', name: 'Master Ref', type: 'any' },  // 组件引用，连接到 SlaveIO
             { id: 'connected', name: 'Connected', type: 'boolean' },
             { id: 'slave_count', name: 'Slave Count', type: 'number' },
             { id: 'state', name: 'State', type: 'string' },
@@ -1155,24 +1360,35 @@ export const componentLibrary: ComponentDefinition[] = [
         name: 'EtherCAT 从站 I/O',
         category: 'protocol',
         icon: '📥',
-        description: 'EtherCAT 从站 I/O 读写',
+        description: 'EtherCAT 从站 I/O 读写，支持 MQTT 转发',
         inputs: [
             { id: 'master', name: 'Master', type: 'any' },
             { id: 'write_data', name: 'Write Data', type: 'array' },
         ],
         outputs: [
             { id: 'read_data', name: 'Read Data', type: 'array' },
+            { id: 'raw_data', name: 'Raw Data', type: 'object' },
             { id: 'connected', name: 'Connected', type: 'boolean' },
         ],
         defaultProperties: {
             slave_index: 0,
             input_size: 8,
             output_size: 8,
+            poll_interval_ms: 100,
+            mqtt_enabled: false,
+            mqtt_broker: 'localhost',
+            mqtt_port: 1883,
+            mqtt_topic: 'ethercat/data',
         },
         propertySchema: [
             { key: 'slave_index', label: 'Slave Index', type: 'number' },
             { key: 'input_size', label: 'Input Size (bytes)', type: 'number' },
             { key: 'output_size', label: 'Output Size (bytes)', type: 'number' },
+            { key: 'poll_interval_ms', label: 'Poll Interval (ms)', type: 'number' },
+            { key: 'mqtt_enabled', label: 'MQTT Forwarding', type: 'boolean' },
+            { key: 'mqtt_broker', label: 'MQTT Broker', type: 'text' },
+            { key: 'mqtt_port', label: 'MQTT Port', type: 'number' },
+            { key: 'mqtt_topic', label: 'MQTT Topic', type: 'text' },
         ]
     },
     {
@@ -1185,6 +1401,7 @@ export const componentLibrary: ComponentDefinition[] = [
             { id: 'enable', name: 'Enable', type: 'boolean' },
         ],
         outputs: [
+            { id: 'network_ref', name: 'Network Ref', type: 'any' },  // 组件引用，连接到 Node/PDO
             { id: 'connected', name: 'Connected', type: 'boolean' },
             { id: 'node_count', name: 'Node Count', type: 'number' },
             { id: 'error', name: 'Error', type: 'string' },
@@ -1219,13 +1436,14 @@ export const componentLibrary: ComponentDefinition[] = [
         name: 'CANopen 节点',
         category: 'protocol',
         icon: '📍',
-        description: 'CANopen 节点对象字典读写',
+        description: 'CANopen 节点对象字典读写，支持 MQTT 转发',
         inputs: [
             { id: 'network', name: 'Network', type: 'any' },
             { id: 'write_value', name: 'Write Value', type: 'number' },
         ],
         outputs: [
             { id: 'read_value', name: 'Read Value', type: 'number' },
+            { id: 'raw_data', name: 'Raw Data', type: 'object' },
             { id: 'connected', name: 'Connected', type: 'boolean' },
             { id: 'state', name: 'State', type: 'string' },
         ],
@@ -1235,6 +1453,11 @@ export const componentLibrary: ComponentDefinition[] = [
             read_subindex: 0,
             write_index: '0x6200',
             write_subindex: 0,
+            poll_interval_ms: 100,
+            mqtt_enabled: false,
+            mqtt_broker: 'localhost',
+            mqtt_port: 1883,
+            mqtt_topic: 'canopen/data',
         },
         propertySchema: [
             { key: 'node_id', label: 'Node ID', type: 'number' },
@@ -1242,6 +1465,45 @@ export const componentLibrary: ComponentDefinition[] = [
             { key: 'read_subindex', label: 'Read Subindex', type: 'number' },
             { key: 'write_index', label: 'Write Index (hex)', type: 'text' },
             { key: 'write_subindex', label: 'Write Subindex', type: 'number' },
+            { key: 'poll_interval_ms', label: 'Poll Interval (ms)', type: 'number' },
+            { key: 'mqtt_enabled', label: 'MQTT Forwarding', type: 'boolean' },
+            { key: 'mqtt_broker', label: 'MQTT Broker', type: 'text' },
+            { key: 'mqtt_port', label: 'MQTT Port', type: 'number' },
+            { key: 'mqtt_topic', label: 'MQTT Topic', type: 'text' },
+        ]
+    },
+    {
+        type: 'canopen_pdo',
+        name: 'CANopen PDO',
+        category: 'protocol',
+        icon: '📦',
+        description: 'CANopen PDO 过程数据对象读写，支持 MQTT 转发',
+        inputs: [
+            { id: 'network', name: 'Network', type: 'any' },
+            { id: 'tx_data', name: 'TX Data', type: 'array' },
+        ],
+        outputs: [
+            { id: 'rx_data', name: 'RX Data', type: 'array' },
+            { id: 'raw_data', name: 'Raw Data', type: 'object' },
+            { id: 'connected', name: 'Connected', type: 'boolean' },
+        ],
+        defaultProperties: {
+            node_id: 1,
+            pdo_number: 1,
+            poll_interval_ms: 100,
+            mqtt_enabled: false,
+            mqtt_broker: 'localhost',
+            mqtt_port: 1883,
+            mqtt_topic: 'canopen/pdo',
+        },
+        propertySchema: [
+            { key: 'node_id', label: 'Node ID', type: 'number' },
+            { key: 'pdo_number', label: 'PDO Number (1-4)', type: 'number' },
+            { key: 'poll_interval_ms', label: 'Poll Interval (ms)', type: 'number' },
+            { key: 'mqtt_enabled', label: 'MQTT Forwarding', type: 'boolean' },
+            { key: 'mqtt_broker', label: 'MQTT Broker', type: 'text' },
+            { key: 'mqtt_port', label: 'MQTT Port', type: 'number' },
+            { key: 'mqtt_topic', label: 'MQTT Topic', type: 'text' },
         ]
     },
     {
@@ -1666,6 +1928,499 @@ export const componentLibrary: ComponentDefinition[] = [
         },
         propertySchema: [
             { key: 'label', label: 'Label', type: 'string' },
+        ]
+    },
+
+    // ============ 电力协议组件 ============
+
+    // IEC 61850 客户端
+    {
+        type: 'iec61850_client',
+        name: 'IEC 61850 客户端',
+        category: 'protocol',
+        icon: '⚡',
+        description: 'IEC 61850 变电站自动化协议客户端 (MMS)',
+        inputs: [
+            { id: 'enable', name: 'Enable', type: 'boolean' },
+        ],
+        outputs: [
+            { id: 'client_ref', name: 'Client Ref', type: 'any' },
+            { id: 'connected', name: 'Connected', type: 'boolean' },
+            { id: 'ied_name', name: 'IED Name', type: 'string' },
+            { id: 'error', name: 'Error', type: 'string' },
+        ],
+        defaultProperties: {
+            host: '192.168.1.100',
+            port: 102,
+            ied_name: 'IED1',
+        },
+        propertySchema: [
+            { key: 'host', label: 'IED IP Address', type: 'text' },
+            { key: 'port', label: 'MMS Port', type: 'number' },
+            { key: 'ied_name', label: 'IED Name', type: 'text' },
+        ]
+    },
+    // IEC 61850 数据读取
+    {
+        type: 'iec61850_data_reader',
+        name: 'IEC 61850 数据读取',
+        category: 'protocol',
+        icon: '📊',
+        description: '读取 IEC 61850 逻辑节点数据对象',
+        inputs: [
+            { id: 'client', name: 'Client', type: 'any' },
+        ],
+        outputs: [
+            { id: 'value', name: 'Value', type: 'any' },
+            { id: 'quality', name: 'Quality', type: 'string' },
+            { id: 'timestamp', name: 'Timestamp', type: 'string' },
+            { id: 'raw_data', name: 'Raw Data', type: 'object' },
+        ],
+        defaultProperties: {
+            logical_device: 'LD0',
+            logical_node: 'MMXU1',
+            data_object: 'TotW',
+            data_attribute: 'mag.f',
+            poll_interval_ms: 1000,
+            mqtt_enabled: false,
+            mqtt_broker: 'localhost',
+            mqtt_port: 1883,
+            mqtt_topic: 'iec61850/data',
+        },
+        propertySchema: [
+            { key: 'logical_device', label: 'Logical Device', type: 'text' },
+            { key: 'logical_node', label: 'Logical Node', type: 'text' },
+            { key: 'data_object', label: 'Data Object', type: 'text' },
+            { key: 'data_attribute', label: 'Data Attribute', type: 'text' },
+            { key: 'poll_interval_ms', label: 'Poll Interval (ms)', type: 'number' },
+            { key: 'mqtt_enabled', label: 'MQTT Forwarding', type: 'boolean' },
+            { key: 'mqtt_broker', label: 'MQTT Broker', type: 'text' },
+            { key: 'mqtt_port', label: 'MQTT Port', type: 'number' },
+            { key: 'mqtt_topic', label: 'MQTT Topic', type: 'text' },
+        ]
+    },
+    // IEC 60870-5-104 客户端
+    {
+        type: 'iec104_client',
+        name: 'IEC 104 客户端',
+        category: 'protocol',
+        icon: '🔋',
+        description: 'IEC 60870-5-104 远动规约客户端 (TCP/IP)',
+        inputs: [
+            { id: 'enable', name: 'Enable', type: 'boolean' },
+        ],
+        outputs: [
+            { id: 'client_ref', name: 'Client Ref', type: 'any' },
+            { id: 'connected', name: 'Connected', type: 'boolean' },
+            { id: 'error', name: 'Error', type: 'string' },
+        ],
+        defaultProperties: {
+            host: '192.168.1.100',
+            port: 2404,
+            common_address: 1,
+            originator_address: 0,
+        },
+        propertySchema: [
+            { key: 'host', label: 'RTU IP Address', type: 'text' },
+            { key: 'port', label: 'Port', type: 'number' },
+            { key: 'common_address', label: 'Common Address', type: 'number' },
+            { key: 'originator_address', label: 'Originator Address', type: 'number' },
+        ]
+    },
+    // IEC 104 数据点
+    {
+        type: 'iec104_data_point',
+        name: 'IEC 104 数据点',
+        category: 'protocol',
+        icon: '📍',
+        description: '读取 IEC 104 遥测/遥信数据点',
+        inputs: [
+            { id: 'client', name: 'Client', type: 'any' },
+            { id: 'command_value', name: 'Command Value', type: 'number' },
+        ],
+        outputs: [
+            { id: 'value', name: 'Value', type: 'number' },
+            { id: 'quality', name: 'Quality', type: 'string' },
+            { id: 'raw_data', name: 'Raw Data', type: 'object' },
+        ],
+        defaultProperties: {
+            ioa: 1,
+            type_id: 'M_ME_NC_1',
+            poll_interval_ms: 1000,
+            mqtt_enabled: false,
+            mqtt_broker: 'localhost',
+            mqtt_port: 1883,
+            mqtt_topic: 'iec104/data',
+        },
+        propertySchema: [
+            { key: 'ioa', label: 'Information Object Address', type: 'number' },
+            {
+                key: 'type_id', label: 'Type ID', type: 'select', options: [
+                    { value: 'M_SP_NA_1', label: '单点信息 (遥信)' },
+                    { value: 'M_DP_NA_1', label: '双点信息' },
+                    { value: 'M_ME_NA_1', label: '归一化测量值' },
+                    { value: 'M_ME_NC_1', label: '短浮点测量值 (遥测)' },
+                    { value: 'M_IT_NA_1', label: '累计量' },
+                ]
+            },
+            { key: 'poll_interval_ms', label: 'Poll Interval (ms)', type: 'number' },
+            { key: 'mqtt_enabled', label: 'MQTT Forwarding', type: 'boolean' },
+            { key: 'mqtt_broker', label: 'MQTT Broker', type: 'text' },
+            { key: 'mqtt_port', label: 'MQTT Port', type: 'number' },
+            { key: 'mqtt_topic', label: 'MQTT Topic', type: 'text' },
+        ]
+    },
+    // IEC 60870-5-101 主站
+    {
+        type: 'iec101_master',
+        name: 'IEC 101 主站',
+        category: 'protocol',
+        icon: '📡',
+        description: 'IEC 60870-5-101 远动规约主站 (串口)',
+        inputs: [
+            { id: 'enable', name: 'Enable', type: 'boolean' },
+        ],
+        outputs: [
+            { id: 'master_ref', name: 'Master Ref', type: 'any' },
+            { id: 'connected', name: 'Connected', type: 'boolean' },
+            { id: 'error', name: 'Error', type: 'string' },
+        ],
+        defaultProperties: {
+            serial_port: 'COM1',
+            baudrate: 9600,
+            link_address: 1,
+            common_address: 1,
+        },
+        propertySchema: [
+            { key: 'serial_port', label: 'Serial Port', type: 'text' },
+            {
+                key: 'baudrate', label: 'Baudrate', type: 'select', options: [
+                    { value: 1200, label: '1200' },
+                    { value: 2400, label: '2400' },
+                    { value: 4800, label: '4800' },
+                    { value: 9600, label: '9600' },
+                    { value: 19200, label: '19200' },
+                ]
+            },
+            { key: 'link_address', label: 'Link Address', type: 'number' },
+            { key: 'common_address', label: 'Common Address', type: 'number' },
+        ]
+    },
+    // IEC 60870-5-103 主站
+    {
+        type: 'iec103_master',
+        name: 'IEC 103 主站',
+        category: 'protocol',
+        icon: '🛡️',
+        description: 'IEC 60870-5-103 继电保护通信主站 (串口)',
+        inputs: [
+            { id: 'enable', name: 'Enable', type: 'boolean' },
+        ],
+        outputs: [
+            { id: 'master_ref', name: 'Master Ref', type: 'any' },
+            { id: 'connected', name: 'Connected', type: 'boolean' },
+            { id: 'error', name: 'Error', type: 'string' },
+        ],
+        defaultProperties: {
+            serial_port: 'COM1',
+            baudrate: 9600,
+            asdu_address: 1,
+        },
+        propertySchema: [
+            { key: 'serial_port', label: 'Serial Port', type: 'text' },
+            {
+                key: 'baudrate', label: 'Baudrate', type: 'select', options: [
+                    { value: 9600, label: '9600' },
+                    { value: 19200, label: '19200' },
+                ]
+            },
+            { key: 'asdu_address', label: 'ASDU Address', type: 'number' },
+        ]
+    },
+    // DNP3 主站
+    {
+        type: 'dnp3_master',
+        name: 'DNP3 主站',
+        category: 'protocol',
+        icon: '🔌',
+        description: 'DNP3 远动规约主站 (北美电力标准)',
+        inputs: [
+            { id: 'enable', name: 'Enable', type: 'boolean' },
+        ],
+        outputs: [
+            { id: 'master_ref', name: 'Master Ref', type: 'any' },
+            { id: 'connected', name: 'Connected', type: 'boolean' },
+            { id: 'error', name: 'Error', type: 'string' },
+        ],
+        defaultProperties: {
+            host: '192.168.1.100',
+            port: 20000,
+            master_address: 1,
+            outstation_address: 10,
+        },
+        propertySchema: [
+            { key: 'host', label: 'Outstation IP', type: 'text' },
+            { key: 'port', label: 'Port', type: 'number' },
+            { key: 'master_address', label: 'Master Address', type: 'number' },
+            { key: 'outstation_address', label: 'Outstation Address', type: 'number' },
+        ]
+    },
+    // DNP3 数据点
+    {
+        type: 'dnp3_data_point',
+        name: 'DNP3 数据点',
+        category: 'protocol',
+        icon: '📈',
+        description: '读取 DNP3 模拟量/二进制输入',
+        inputs: [
+            { id: 'master', name: 'Master', type: 'any' },
+        ],
+        outputs: [
+            { id: 'value', name: 'Value', type: 'number' },
+            { id: 'quality', name: 'Quality', type: 'string' },
+            { id: 'raw_data', name: 'Raw Data', type: 'object' },
+        ],
+        defaultProperties: {
+            point_index: 0,
+            point_type: 'analog_input',
+            poll_interval_ms: 1000,
+            mqtt_enabled: false,
+            mqtt_broker: 'localhost',
+            mqtt_port: 1883,
+            mqtt_topic: 'dnp3/data',
+        },
+        propertySchema: [
+            { key: 'point_index', label: 'Point Index', type: 'number' },
+            {
+                key: 'point_type', label: 'Point Type', type: 'select', options: [
+                    { value: 'binary_input', label: 'Binary Input (遥信)' },
+                    { value: 'analog_input', label: 'Analog Input (遥测)' },
+                    { value: 'counter', label: 'Counter (累计量)' },
+                ]
+            },
+            { key: 'poll_interval_ms', label: 'Poll Interval (ms)', type: 'number' },
+            { key: 'mqtt_enabled', label: 'MQTT Forwarding', type: 'boolean' },
+            { key: 'mqtt_broker', label: 'MQTT Broker', type: 'text' },
+            { key: 'mqtt_port', label: 'MQTT Port', type: 'number' },
+            { key: 'mqtt_topic', label: 'MQTT Topic', type: 'text' },
+        ]
+    },
+
+    // ============ 工厂自动化协议组件 ============
+
+    // Profibus 主站
+    {
+        type: 'profibus_master',
+        name: 'Profibus DP 主站',
+        category: 'protocol',
+        icon: '🏭',
+        description: 'Profibus DP 现场总线主站',
+        inputs: [
+            { id: 'enable', name: 'Enable', type: 'boolean' },
+        ],
+        outputs: [
+            { id: 'master_ref', name: 'Master Ref', type: 'any' },
+            { id: 'connected', name: 'Connected', type: 'boolean' },
+            { id: 'slave_count', name: 'Slave Count', type: 'number' },
+            { id: 'error', name: 'Error', type: 'string' },
+        ],
+        defaultProperties: {
+            interface: 'DP0',
+            baudrate: 1500000,
+            master_address: 1,
+        },
+        propertySchema: [
+            { key: 'interface', label: 'Profibus Interface', type: 'text' },
+            {
+                key: 'baudrate', label: 'Baudrate', type: 'select', options: [
+                    { value: 93750, label: '93.75 kbps' },
+                    { value: 187500, label: '187.5 kbps' },
+                    { value: 500000, label: '500 kbps' },
+                    { value: 1500000, label: '1.5 Mbps' },
+                    { value: 12000000, label: '12 Mbps' },
+                ]
+            },
+            { key: 'master_address', label: 'Master Address', type: 'number' },
+        ]
+    },
+    // Profibus 从站
+    {
+        type: 'profibus_slave',
+        name: 'Profibus DP 从站',
+        category: 'protocol',
+        icon: '📥',
+        description: 'Profibus DP 从站数据读写',
+        inputs: [
+            { id: 'master', name: 'Master', type: 'any' },
+            { id: 'write_data', name: 'Write Data', type: 'array' },
+        ],
+        outputs: [
+            { id: 'read_data', name: 'Read Data', type: 'array' },
+            { id: 'raw_data', name: 'Raw Data', type: 'object' },
+            { id: 'connected', name: 'Connected', type: 'boolean' },
+        ],
+        defaultProperties: {
+            slave_address: 3,
+            input_size: 8,
+            output_size: 8,
+            poll_interval_ms: 100,
+            mqtt_enabled: false,
+            mqtt_broker: 'localhost',
+            mqtt_port: 1883,
+            mqtt_topic: 'profibus/data',
+        },
+        propertySchema: [
+            { key: 'slave_address', label: 'Slave Address', type: 'number' },
+            { key: 'input_size', label: 'Input Size (bytes)', type: 'number' },
+            { key: 'output_size', label: 'Output Size (bytes)', type: 'number' },
+            { key: 'poll_interval_ms', label: 'Poll Interval (ms)', type: 'number' },
+            { key: 'mqtt_enabled', label: 'MQTT Forwarding', type: 'boolean' },
+            { key: 'mqtt_broker', label: 'MQTT Broker', type: 'text' },
+            { key: 'mqtt_port', label: 'MQTT Port', type: 'number' },
+            { key: 'mqtt_topic', label: 'MQTT Topic', type: 'text' },
+        ]
+    },
+    // Profinet 控制器
+    {
+        type: 'profinet_controller',
+        name: 'Profinet IO 控制器',
+        category: 'protocol',
+        icon: '🌐',
+        description: 'Profinet IO 工业以太网控制器',
+        inputs: [
+            { id: 'enable', name: 'Enable', type: 'boolean' },
+        ],
+        outputs: [
+            { id: 'controller_ref', name: 'Controller Ref', type: 'any' },
+            { id: 'connected', name: 'Connected', type: 'boolean' },
+            { id: 'device_count', name: 'Device Count', type: 'number' },
+            { id: 'error', name: 'Error', type: 'string' },
+        ],
+        defaultProperties: {
+            interface: 'eth0',
+            station_name: 'controller',
+        },
+        propertySchema: [
+            { key: 'interface', label: 'Network Interface', type: 'text' },
+            { key: 'station_name', label: 'Station Name', type: 'text' },
+        ]
+    },
+    // Profinet 设备
+    {
+        type: 'profinet_device',
+        name: 'Profinet IO 设备',
+        category: 'protocol',
+        icon: '📟',
+        description: 'Profinet IO 设备数据读写',
+        inputs: [
+            { id: 'controller', name: 'Controller', type: 'any' },
+            { id: 'write_data', name: 'Write Data', type: 'array' },
+        ],
+        outputs: [
+            { id: 'read_data', name: 'Read Data', type: 'array' },
+            { id: 'raw_data', name: 'Raw Data', type: 'object' },
+            { id: 'connected', name: 'Connected', type: 'boolean' },
+        ],
+        defaultProperties: {
+            device_name: 'device1',
+            slot: 1,
+            subslot: 1,
+            input_size: 8,
+            output_size: 8,
+            poll_interval_ms: 100,
+            mqtt_enabled: false,
+            mqtt_broker: 'localhost',
+            mqtt_port: 1883,
+            mqtt_topic: 'profinet/data',
+        },
+        propertySchema: [
+            { key: 'device_name', label: 'Device Name', type: 'text' },
+            { key: 'slot', label: 'Slot', type: 'number' },
+            { key: 'subslot', label: 'Subslot', type: 'number' },
+            { key: 'input_size', label: 'Input Size (bytes)', type: 'number' },
+            { key: 'output_size', label: 'Output Size (bytes)', type: 'number' },
+            { key: 'poll_interval_ms', label: 'Poll Interval (ms)', type: 'number' },
+            { key: 'mqtt_enabled', label: 'MQTT Forwarding', type: 'boolean' },
+            { key: 'mqtt_broker', label: 'MQTT Broker', type: 'text' },
+            { key: 'mqtt_port', label: 'MQTT Port', type: 'number' },
+            { key: 'mqtt_topic', label: 'MQTT Topic', type: 'text' },
+        ]
+    },
+
+    // ============ 楼宇自动化协议组件 ============
+
+    // BACnet 客户端
+    {
+        type: 'bacnet_client',
+        name: 'BACnet 客户端',
+        category: 'protocol',
+        icon: '🏢',
+        description: 'BACnet/IP 楼宇自动化协议客户端',
+        inputs: [
+            { id: 'enable', name: 'Enable', type: 'boolean' },
+        ],
+        outputs: [
+            { id: 'client_ref', name: 'Client Ref', type: 'any' },
+            { id: 'connected', name: 'Connected', type: 'boolean' },
+            { id: 'device_count', name: 'Device Count', type: 'number' },
+            { id: 'error', name: 'Error', type: 'string' },
+        ],
+        defaultProperties: {
+            interface: '0.0.0.0',
+            port: 47808,
+        },
+        propertySchema: [
+            { key: 'interface', label: 'Local IP Address', type: 'text' },
+            { key: 'port', label: 'BACnet Port', type: 'number' },
+        ]
+    },
+    // BACnet 对象
+    {
+        type: 'bacnet_object',
+        name: 'BACnet 对象',
+        category: 'protocol',
+        icon: '🌡️',
+        description: '读写 BACnet 对象属性 (温度、湿度等)',
+        inputs: [
+            { id: 'client', name: 'Client', type: 'any' },
+            { id: 'write_value', name: 'Write Value', type: 'number' },
+        ],
+        outputs: [
+            { id: 'value', name: 'Value', type: 'number' },
+            { id: 'raw_data', name: 'Raw Data', type: 'object' },
+        ],
+        defaultProperties: {
+            device_id: 1234,
+            object_type: 'analogInput',
+            object_instance: 1,
+            property_id: 'presentValue',
+            poll_interval_ms: 1000,
+            mqtt_enabled: false,
+            mqtt_broker: 'localhost',
+            mqtt_port: 1883,
+            mqtt_topic: 'bacnet/data',
+        },
+        propertySchema: [
+            { key: 'device_id', label: 'Device Instance ID', type: 'number' },
+            {
+                key: 'object_type', label: 'Object Type', type: 'select', options: [
+                    { value: 'analogInput', label: 'Analog Input (温度/湿度)' },
+                    { value: 'analogOutput', label: 'Analog Output (设定值)' },
+                    { value: 'analogValue', label: 'Analog Value' },
+                    { value: 'binaryInput', label: 'Binary Input (开关状态)' },
+                    { value: 'binaryOutput', label: 'Binary Output (控制开关)' },
+                    { value: 'binaryValue', label: 'Binary Value' },
+                    { value: 'multiStateInput', label: 'Multi-State Input' },
+                    { value: 'multiStateOutput', label: 'Multi-State Output' },
+                ]
+            },
+            { key: 'object_instance', label: 'Object Instance', type: 'number' },
+            { key: 'property_id', label: 'Property ID', type: 'text' },
+            { key: 'poll_interval_ms', label: 'Poll Interval (ms)', type: 'number' },
+            { key: 'mqtt_enabled', label: 'MQTT Forwarding', type: 'boolean' },
+            { key: 'mqtt_broker', label: 'MQTT Broker', type: 'text' },
+            { key: 'mqtt_port', label: 'MQTT Port', type: 'number' },
+            { key: 'mqtt_topic', label: 'MQTT Topic', type: 'text' },
         ]
     },
 ]

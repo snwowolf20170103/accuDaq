@@ -19,7 +19,8 @@
         "react-grid-layout": "^2.2.2",
         "recharts": "^3.6.0",
         "tree-kill": "^1.2.2",
-        "uuid": "^9.0.0"
+        "uuid": "^9.0.0",
+        "websocket-stream": "^5.5.2"
     },
     "devDependencies": {
         "@playwright/test": "^1.58.0",

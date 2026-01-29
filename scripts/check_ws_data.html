@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <title>WebSocket 数据连通性测试</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Consolas', 'Monaco', monospace;
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 30px;
+        }
+
+        h1 {
+            color: #4fc3f7;
+            margin-bottom: 20px;
+            font-size: 24px;
+        }
+
+        .test-container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            max-width: 1000px;
+        }
+
+        .endpoint-test {
+            background: #252526;
+            border: 2px solid #3c3c3c;
+            border-radius: 8px;
+            padding: 20px;
+            position: relative;
+        }
+
+        .endpoint-test.success {
+            border-color: #4caf50;
+        }
+
+        .endpoint-test.error {
+            border-color: #f44336;
+        }
+
+        .endpoint-header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .status-indicator {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #ffc107;
+            position: relative;
+        }
+
+        .status-indicator.connected {
+            background: #4caf50;
+            box-shadow: 0 0 15px #4caf50;
+        }
+
+        .status-indicator.connecting {
+            background: #ffc107;
+            animation: blink 1s infinite;
+        }
+
+        .status-indicator.disconnected {
+            background: #f44336;
+        }
+
+        @keyframes blink {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.3;
+            }
+        }
+
+        .endpoint-url {
+            font-size: 18px;
+            color: #4fc3f7;
+            flex: 1;
+        }
+
+        .stats {
+            display: flex;
+            gap: 20px;
+            font-size: 13px;
+            color: #858585;
+            margin-bottom: 10px;
+        }
+
+        .stats span {
+            background: #1e1e1e;
+            padding: 5px 10px;
+            border-radius: 4px;
+        }
+
+        .stats .count {
+            color: #4caf50;
+            font-weight: bold;
+        }
+
+        .latest-message {
+            background: #1e1e1e;
+            padding: 15px;
+            border-radius: 6px;
+            border-left: 4px solid #4fc3f7;
+            font-size: 13px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .message-time {
+            color: #ffc107;
+            font-size: 11px;
+            margin-bottom: 5px;
+        }
+
+        .no-data {
+            color: #858585;
+            font-style: italic;
+        }
+
+        .summary {
+            background: #2d2d30;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid #4fc3f7;
+        }
+
+        .summary h2 {
+            color: #4fc3f7;
+            font-size: 18px;
+            margin-bottom: 10px;
+        }
+
+        .test-result {
+            display: inline-block;
+            padding: 8px 16px;
+            border-radius: 4px;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+
+        .test-result.pass {
+            background: #4caf50;
+            color: white;
+        }
+
+        .test-result.fail {
+            background: #f44336;
+            color: white;
+        }
+
+        .test-result.waiting {
+            background: #ffc107;
+            color: black;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>📡 WebSocket 数据连通性测试</h1>
+
+    <div class="summary" id="summary">
+        <h2>测试结果</h2>
+        <div>正在检测连接...</div>
+        <div class="test-result waiting" id="overall-result">⏳ 等待数据...</div>
+    </div>
+
+    <div class="test-container">
+        <!-- Endpoint 1: Modbus -->
+        <div class="endpoint-test" id="test-modbus">
+            <div class="endpoint-header">
+                <div class="status-indicator connecting" id="status-modbus"></div>
+                <div class="endpoint-url">ws://localhost:9000/modbus</div>
+            </div>
+            <div class="stats">
+                <span>主题: <strong>modbus/data</strong></span>
+                <span>收到消息: <span class="count" id="count-modbus">0</span></span>
+                <span>最后更新: <span id="time-modbus">-</span></span>
+            </div>
+            <div class="latest-message">
+                <div class="no-data" id="data-modbus">等待数据...</div>
+            </div>
+        </div>
+
+        <!-- Endpoint 2: Sine Wave -->
+        <div class="endpoint-test" id="test-sine">
+            <div class="endpoint-header">
+                <div class="status-indicator connecting" id="status-sine"></div>
+                <div class="endpoint-url">ws://localhost:9000/sine_wave</div>
+            </div>
+            <div class="stats">
+                <span>主题: <strong>sensor/sine_wave</strong></span>
+                <span>收到消息: <span class="count" id="count-sine">0</span></span>
+                <span>最后更新: <span id="time-sine">-</span></span>
+            </div>
+            <div class="latest-message">
+                <div class="no-data" id="data-sine">等待数据...</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const tests = {
+            modbus: {
+                url: 'ws://localhost:9000/modbus',
+                count: 0,
+                connected: false,
+                lastData: null
+            },
+            sine: {
+                url: 'ws://localhost:9000/sine_wave',
+                count: 0,
+                connected: false,
+                lastData: null
+            }
+        };
+
+        function updateSummary() {
+            const allConnected = tests.modbus.connected && tests.sine.connected;
+            const allHaveData = tests.modbus.count > 0 && tests.sine.count > 0;
+            const resultEl = document.getElementById('overall-result');
+            const summaryEl = document.getElementById('summary').querySelector('div');
+
+            if (allConnected && allHaveData) {
+                resultEl.className = 'test-result pass';
+                resultEl.textContent = '✅ 测试通过';
+                summaryEl.innerHTML = `
+                    <strong style="color: #4caf50;">所有端点正常工作</strong><br>
+                    • Modbus: 已连接，收到 ${tests.modbus.count} 条消息<br>
+                    • Sine Wave: 已连接，收到 ${tests.sine.count} 条消息
+                `;
+            } else if (tests.modbus.connected || tests.sine.connected) {
+                resultEl.className = 'test-result waiting';
+                resultEl.textContent = '⏳ 部分连接';
+                summaryEl.innerHTML = `
+                    <strong style="color: #ffc107;">部分端点已连接</strong><br>
+                    • Modbus: ${tests.modbus.connected ? '✅ 已连接' : '❌ 未连接'} (${tests.modbus.count} 条消息)<br>
+                    • Sine Wave: ${tests.sine.connected ? '✅ 已连接' : '❌ 未连接'} (${tests.sine.count} 条消息)
+                `;
+            } else {
+                resultEl.className = 'test-result fail';
+                resultEl.textContent = '❌ 连接失败';
+                summaryEl.innerHTML = `
+                    <strong style="color: #f44336;">无法连接到任何端点</strong><br>
+                    请检查：<br>
+                    • WebSocket 桥接服务是否运行 (node ws_data_bridge.js)<br>
+                    • MQTT Broker 是否运行 (node start_broker.js)<br>
+                    • 数据源是否运行 (Modbus 模拟器和 MQTT 模拟器)
+                `;
+            }
+        }
+
+        function createTest(name, url) {
+            const ws = new WebSocket(url);
+            const statusEl = document.getElementById(`status-${name}`);
+            const countEl = document.getElementById(`count-${name}`);
+            const timeEl = document.getElementById(`time-${name}`);
+            const dataEl = document.getElementById(`data-${name}`);
+            const containerEl = document.getElementById(`test-${name}`);
+
+            ws.onopen = () => {
+                console.log(`[${name}] 已连接`);
+                statusEl.className = 'status-indicator connected';
+                tests[name].connected = true;
+                updateSummary();
+            };
+
+            ws.onmessage = (event) => {
+                try {
+                    const message = JSON.parse(event.data);
+
+                    if (message.type === 'welcome') {
+                        console.log(`[${name}] 欢迎消息:`, message.message);
+                        return;
+                    }
+
+                    tests[name].count++;
+                    tests[name].lastData = message;
+
+                    countEl.textContent = tests[name].count;
+                    timeEl.textContent = new Date().toLocaleTimeString();
+
+                    const messageHtml = `<div class="message-time">${new Date(message.timestamp).toLocaleTimeString()}</div>${JSON.stringify(message.data, null, 2)}`;
+                    dataEl.innerHTML = messageHtml;
+                    dataEl.className = '';
+
+                    containerEl.className = 'endpoint-test success';
+                    updateSummary();
+
+                } catch (e) {
+                    console.error(`[${name}] 解析错误:`, e);
+                }
+            };
+
+            ws.onerror = (error) => {
+                console.error(`[${name}] 连接错误:`, error);
+                statusEl.className = 'status-indicator disconnected';
+                dataEl.innerHTML = '<div class="no-data" style="color: #f44336;">❌ 连接错误</div>';
+                containerEl.className = 'endpoint-test error';
+                updateSummary();
+            };
+
+            ws.onclose = () => {
+                console.log(`[${name}] 连接已关闭`);
+                statusEl.className = 'status-indicator disconnected';
+                tests[name].connected = false;
+                updateSummary();
+            };
+        }
+
+        // 启动测试
+        console.log('开始测试 WebSocket 端点...');
+        createTest('modbus', tests.modbus.url);
+        createTest('sine', tests.sine.url);
+
+        // 定期更新摘要
+        setInterval(updateSummary, 1000);
+    </script>
+</body>
+
+</html>

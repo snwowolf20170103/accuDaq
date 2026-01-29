@@ -10,7 +10,7 @@ from .math_ops import MathOperationComponent, CompareComponent
 from .csv_storage import CSVStorageComponent
 from .custom_script import CustomScriptComponent
 from .threshold_alarm import ThresholdAlarmComponent
-from .modbus_client import ModbusClientComponent
+from .modbus_client import ModbusTCPClientComponent
 from .debug_print import DebugPrintComponent
 from .data_probe import DataProbeComponent
 from .global_variable import GlobalVariableComponent
@@ -68,6 +68,16 @@ from .power_protocols import (
     IEC61850ClientComponent, IEC61850GOOSEComponent,
     DNP3MasterComponent, IEC104ClientComponent, BACnetClientComponent,
 )
+from .industrial_protocols import (
+    IEC61850DataReaderComponent,
+    IEC104DataPointComponent,
+    IEC101MasterComponent,
+    IEC103MasterComponent,
+    DNP3DataPointComponent,
+    ProfibusMasterComponent, ProfibusSlaveComponent,
+    ProfinetControllerComponent, ProfinetDeviceComponent,
+    BACnetObjectComponent,
+)
 # Database Storage Components
 from .redis_cache import RedisCacheComponent
 from .sqlite_storage import SQLiteStorageComponent
@@ -85,6 +95,8 @@ MathOperation = MathOperationComponent
 DebugPrint = DebugPrintComponent
 GlobalVariable = GlobalVariableComponent
 DataProbe = DataProbeComponent
+ModbusTCPClient = ModbusTCPClientComponent
+ModbusClient = ModbusTCPClientComponent  # 向后兼容别名
 
 FFT = FFTComponent
 MovingAverageFilter = MovingAverageFilterComponent
@@ -115,7 +127,9 @@ __all__ = [
     "CSVStorageComponent",
     "CustomScriptComponent",
     "ThresholdAlarmComponent",
-    "ModbusClientComponent",
+    "ModbusTCPClientComponent",
+    "ModbusTCPClient",
+    "ModbusClient",  # 向后兼容
     "DebugPrintComponent",
     "GlobalVariableComponent",
     "DataProbeComponent",

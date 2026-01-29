@@ -1,0 +1,93 @@
+{
+  "meta": {
+    "name": "123.daq",
+    "version": "1.0.0",
+    "schemaVersion": "2.0.0",
+    "modifiedAt": "2026-01-27T09:58:30.409Z"
+  },
+  "settings": {
+    "debugMode": false,
+    "autoSave": true
+  },
+  "devices": [],
+  "logic": {
+    "nodes": [
+      {
+        "id": "7470225d-3fe1-470a-b9b5-67a6c1ab4f12",
+        "type": "daq:opc_ua_client",
+        "label": "OPC UA Client",
+        "position": {
+          "x": 115,
+          "y": 250
+        },
+        "properties": {
+          "endpoint": "opc.tcp://localhost:4840",
+          "username": "",
+          "password": "",
+          "security_policy": "",
+          "auto_reconnect": true,
+          "reconnect_interval": 5
+        }
+      },
+      {
+        "id": "c4f40fe4-14de-450c-b7f5-cc523a3d8493",
+        "type": "daq:opc_ua_reader",
+        "label": "OPC UA Reader",
+        "position": {
+          "x": 512,
+          "y": 247.60003662109375
+        },
+        "properties": {
+          "node_id": "ns=2;i=2",
+          "poll_interval_ms": 1000,
+          "data_type": "auto",
+          "mqtt_enabled": true,
+          "mqtt_broker": "localhost",
+          "mqtt_port": 1883,
+          "mqtt_topic": "opcUa/data2026"
+        }
+      }
+    ],
+    "wires": [
+      {
+        "id": "xy-edge__7470225d-3fe1-470a-b9b5-67a6c1ab4f12client_ref-c4f40fe4-14de-450c-b7f5-cc523a3d8493client",
+        "source": {
+          "nodeId": "7470225d-3fe1-470a-b9b5-67a6c1ab4f12",
+          "portId": "client_ref"
+        },
+        "target": {
+          "nodeId": "c4f40fe4-14de-450c-b7f5-cc523a3d8493",
+          "portId": "client"
+        }
+      }
+    ]
+  },
+  "ui": {
+    "widgets": [
+      {
+        "id": "widget_1769504331005",
+        "type": "line_chart",
+        "title": "折线图",
+        "config": {
+          "color": "#4a90d9",
+          "dataKey": "value"
+        },
+        "binding": {
+          "type": "device",
+          "path": "opcUa/data2026"
+        }
+      }
+    ],
+    "layout": [
+      {
+        "i": "widget_1769504331005",
+        "x": 0,
+        "y": 0,
+        "w": 6,
+        "h": 4,
+        "moved": false,
+        "static": false
+      }
+    ]
+  }
+}
