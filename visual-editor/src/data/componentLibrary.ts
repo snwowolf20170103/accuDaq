@@ -2514,6 +2514,157 @@ export const componentLibrary: ComponentDefinition[] = [
             { key: 'mqtt_topic', label: 'MQTT Topic', type: 'text' },
         ]
     },
+
+    // ============ 算法组件 ============
+    {
+        type: 'FFT',
+        name: 'FFT 频谱分析',
+        category: 'algorithm',
+        icon: '📊',
+        description: '对信号进行快速傅里叶变换，提取频域特征',
+        inputs: [
+            { id: 'signal', name: 'Input Signal', type: 'number' },
+        ],
+        outputs: [
+            { id: 'frequencies', name: 'Frequencies', type: 'array' },
+            { id: 'magnitudes', name: 'Magnitudes', type: 'array' },
+            { id: 'dominant_freq', name: 'Dominant Freq', type: 'number' },
+            { id: 'ready', name: 'Ready', type: 'boolean' },
+        ],
+        defaultProperties: {
+            window_size: 256,
+            sample_rate: 1000,
+        },
+        propertySchema: [
+            { key: 'window_size', label: 'Window Size', type: 'number' },
+            { key: 'sample_rate', label: 'Sample Rate (Hz)', type: 'number' },
+        ]
+    },
+    {
+        type: 'MovingAverageFilter',
+        name: '移动平均滤波',
+        category: 'algorithm',
+        icon: '〰️',
+        description: '平滑输入信号，减少噪声',
+        inputs: [
+            { id: 'input', name: 'Input', type: 'number' },
+        ],
+        outputs: [
+            { id: 'output', name: 'Output', type: 'number' },
+            { id: 'variance', name: 'Variance', type: 'number' },
+        ],
+        defaultProperties: {
+            window_size: 10,
+        },
+        propertySchema: [
+            { key: 'window_size', label: 'Window Size', type: 'number' },
+        ]
+    },
+    {
+        type: 'LowPassFilter',
+        name: '低通滤波器',
+        category: 'algorithm',
+        icon: '📉',
+        description: '一阶指数低通滤波器',
+        inputs: [
+            { id: 'input', name: 'Input', type: 'number' },
+        ],
+        outputs: [
+            { id: 'output', name: 'Output', type: 'number' },
+        ],
+        defaultProperties: {
+            alpha: 0.1,
+            sample_rate: 1000,
+        },
+        propertySchema: [
+            { key: 'alpha', label: 'Alpha (0-1)', type: 'number' },
+            { key: 'cutoff_freq', label: 'Cutoff Freq (Hz)', type: 'number' },
+            { key: 'sample_rate', label: 'Sample Rate (Hz)', type: 'number' },
+        ]
+    },
+    {
+        type: 'PIDController',
+        name: 'PID 控制器',
+        category: 'algorithm',
+        icon: '⚙️',
+        description: '经典 PID 闭环控制算法',
+        inputs: [
+            { id: 'setpoint', name: 'Setpoint', type: 'number' },
+            { id: 'process_value', name: 'Current Value', type: 'number' },
+            { id: 'reset', name: 'Reset', type: 'boolean' },
+        ],
+        outputs: [
+            { id: 'output', name: 'Control Output', type: 'number' },
+            { id: 'error', name: 'Error', type: 'number' },
+            { id: 'p_term', name: 'P Term', type: 'number' },
+            { id: 'i_term', name: 'I Term', type: 'number' },
+            { id: 'd_term', name: 'D Term', type: 'number' },
+        ],
+        defaultProperties: {
+            kp: 1.0,
+            ki: 0.1,
+            kd: 0.01,
+            dt: 0.1,
+        },
+        propertySchema: [
+            { key: 'kp', label: 'Proportional (Kp)', type: 'number' },
+            { key: 'ki', label: 'Integral (Ki)', type: 'number' },
+            { key: 'kd', label: 'Derivative (Kd)', type: 'number' },
+            { key: 'output_min', label: 'Output Min', type: 'number' },
+            { key: 'output_max', label: 'Output Max', type: 'number' },
+            { key: 'dt', label: 'Time Step (s)', type: 'number' },
+        ]
+    },
+    {
+        type: 'KalmanFilter',
+        name: '卡尔曼滤波',
+        category: 'algorithm',
+        icon: '🎯',
+        description: '一维卡尔曼滤波器，用于最优状态估计',
+        inputs: [
+            { id: 'measurement', name: 'Measurement', type: 'number' },
+        ],
+        outputs: [
+            { id: 'estimate', name: 'Estimate', type: 'number' },
+            { id: 'uncertainty', name: 'Uncertainty', type: 'number' },
+        ],
+        defaultProperties: {
+            process_noise: 0.01,
+            measurement_noise: 0.1,
+            initial_estimate: 0,
+            initial_uncertainty: 1,
+        },
+        propertySchema: [
+            { key: 'process_noise', label: 'Process Noise', type: 'number' },
+            { key: 'measurement_noise', label: 'Measurement Noise', type: 'number' },
+            { key: 'initial_estimate', label: 'Initial Estimate', type: 'number' },
+            { key: 'initial_uncertainty', label: 'Initial Uncertainty', type: 'number' },
+        ]
+    },
+    {
+        type: 'Statistics',
+        name: '统计分析',
+        category: 'algorithm',
+        icon: '📊',
+        description: '计算实时数据的均值、方差、极值等统计信息',
+        inputs: [
+            { id: 'input', name: 'Input', type: 'number' },
+            { id: 'reset', name: 'Reset', type: 'boolean' },
+        ],
+        outputs: [
+            { id: 'mean', name: 'Mean', type: 'number' },
+            { id: 'std', name: 'Std Dev', type: 'number' },
+            { id: 'min', name: 'Min', type: 'number' },
+            { id: 'max', name: 'Max', type: 'number' },
+            { id: 'count', name: 'Count', type: 'number' },
+        ],
+        defaultProperties: {
+            window_size: 100,
+        },
+        propertySchema: [
+            { key: 'window_size', label: 'Window Size', type: 'number' },
+        ]
+    },
 ]
 
 export default componentLibrary

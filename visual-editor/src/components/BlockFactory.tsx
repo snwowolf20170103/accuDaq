@@ -1,526 +1,14 @@
 /**
- * Block Factory 组件
- * 基于 Blockly 官方 Block Factory 实现，允许用户可视化设计自定义积木
- * 参考: https://github.com/google/blockly/tree/master/demos/blockfactory
+ * Block Factory Component
+ * Based on official Blockly Block Factory, allows users to visually design custom blocks
+ * Reference: https://github.com/google/blockly/tree/master/demos/blockfactory
  */
 
 import { useEffect, useRef, useState, useCallback } from 'react';
 import * as Blockly from 'blockly';
 import 'blockly/blocks';
 import './BlockFactory.css';
-
-// ============================================================================
-// Block Factory 积木定义 - 与官方 Block Factory 保持一致
-// ============================================================================
-
-const defineFactoryBlocks = () => {
-    // ========== 根积木: factory_base ==========
-    Blockly.Blocks['factory_base'] = {
-        init: function(this: Blockly.Block) {
-            this.setColour(120);
-            this.appendDummyInput()
-                .appendField('name')
-                .appendField(new Blockly.FieldTextInput('block_type'), 'NAME');
-            this.appendStatementInput('INPUTS')
-                .setCheck('Input')
-                .appendField('inputs');
-            
-            const inlineDropdown = new Blockly.FieldDropdown([
-                ['automatic inputs', 'AUTO'],
-                ['external inputs', 'EXT'],
-                ['inline inputs', 'INT']
-            ]);
-            this.appendDummyInput()
-                .appendField(inlineDropdown, 'INLINE');
-            
-            const connectionsDropdown = new Blockly.FieldDropdown([
-                ['no connections', 'NONE'],
-                ['← left output', 'LEFT'],
-                ['↕ top+bottom connections', 'BOTH'],
-                ['↑ top connection', 'TOP'],
-                ['↓ bottom connection', 'BOTTOM']
-            ], function(this: Blockly.FieldDropdown, option: string) {
-                const block = this.getSourceBlock();
-                if (block) {
-                    (block as FactoryBaseBlock).updateShape_(option);
-                }
-                return option;
-            });
-            this.appendDummyInput()
-                .appendField(connectionsDropdown, 'CONNECTIONS');
-            
-            this.appendValueInput('TOOLTIP')
-                .setCheck('String')
-                .appendField('tooltip');
-            this.appendValueInput('HELPURL')
-                .setCheck('String')
-                .appendField('help url');
-            this.appendValueInput('COLOUR')
-                .setCheck('Colour')
-                .appendField('colour');
-            
-            this.setTooltip('Build a custom block by plugging\nfields, inputs and other blocks here.');
-            this.setHelpUrl('https://developers.google.com/blockly/guides/create-custom-blocks/block-factory');
-            this.setDeletable(false);
-        },
-        
-        mutationToDom: function(this: Blockly.Block) {
-            const container = Blockly.utils.xml.createElement('mutation');
-            container.setAttribute('connections', this.getFieldValue('CONNECTIONS'));
-            return container;
-        },
-        
-        domToMutation: function(this: FactoryBaseBlock, xmlElement: Element) {
-            const connections = xmlElement.getAttribute('connections') || 'NONE';
-            this.updateShape_(connections);
-        },
-        
-        updateShape_: function(this: FactoryBaseBlock, option: string) {
-            const outputExists = this.getInput('OUTPUTTYPE');
-            const topExists = this.getInput('TOPTYPE');
-            const bottomExists = this.getInput('BOTTOMTYPE');
-            
-            if (option === 'LEFT') {
-                if (!outputExists) {
-                    this.appendValueInput('OUTPUTTYPE')
-                        .setCheck('Type')
-                        .appendField('output type');
-                    this.moveInputBefore('OUTPUTTYPE', 'COLOUR');
-                }
-            } else if (outputExists) {
-                this.removeInput('OUTPUTTYPE');
-            }
-            
-            if (option === 'TOP' || option === 'BOTH') {
-                if (!topExists) {
-                    this.appendValueInput('TOPTYPE')
-                        .setCheck('Type')
-                        .appendField('top type');
-                    this.moveInputBefore('TOPTYPE', 'COLOUR');
-                }
-            } else if (topExists) {
-                this.removeInput('TOPTYPE');
-            }
-            
-            if (option === 'BOTTOM' || option === 'BOTH') {
-                if (!bottomExists) {
-                    this.appendValueInput('BOTTOMTYPE')
-                        .setCheck('Type')
-                        .appendField('bottom type');
-                    this.moveInputBefore('BOTTOMTYPE', 'COLOUR');
-                }
-            } else if (bottomExists) {
-                this.removeInput('BOTTOMTYPE');
-            }
-        }
-    };
-
-    // ========== 输入积木 ==========
-    
-    // 值输入
-    Blockly.Blocks['input_value'] = {
-        init: function(this: Blockly.Block) {
-            this.appendDummyInput()
-                .appendField('value input')
-                .appendField(new Blockly.FieldTextInput('NAME'), 'INPUTNAME');
-            this.appendDummyInput()
-                .appendField('fields')
-                .appendField(new Blockly.FieldDropdown([
-                    ['left', 'LEFT'],
-                    ['right', 'RIGHT'],
-                    ['centre', 'CENTRE']
-                ]), 'ALIGN');
-            this.appendStatementInput('FIELDS')
-                .setCheck('Field');
-            this.appendValueInput('TYPE')
-                .setCheck('Type')
-                .setAlign(Blockly.inputs.Align.RIGHT)
-                .appendField('type');
-            this.setPreviousStatement(true, 'Input');
-            this.setNextStatement(true, 'Input');
-            this.setColour(210);
-            this.setTooltip('A value socket for horizontal connections.');
-        }
-    };
-
-    // 语句输入
-    Blockly.Blocks['input_statement'] = {
-        init: function(this: Blockly.Block) {
-            this.appendDummyInput()
-                .appendField('statement input')
-                .appendField(new Blockly.FieldTextInput('NAME'), 'INPUTNAME');
-            this.appendDummyInput()
-                .appendField('fields')
-                .appendField(new Blockly.FieldDropdown([
-                    ['left', 'LEFT'],
-                    ['right', 'RIGHT'],
-                    ['centre', 'CENTRE']
-                ]), 'ALIGN');
-            this.appendStatementInput('FIELDS')
-                .setCheck('Field');
-            this.appendValueInput('TYPE')
-                .setCheck('Type')
-                .setAlign(Blockly.inputs.Align.RIGHT)
-                .appendField('type');
-            this.setPreviousStatement(true, 'Input');
-            this.setNextStatement(true, 'Input');
-            this.setColour(210);
-            this.setTooltip('A statement socket for enclosed vertical stacks.');
-        }
-    };
-
-    // 空输入
-    Blockly.Blocks['input_dummy'] = {
-        init: function(this: Blockly.Block) {
-            this.appendDummyInput()
-                .appendField('dummy input');
-            this.appendDummyInput()
-                .appendField('fields')
-                .appendField(new Blockly.FieldDropdown([
-                    ['left', 'LEFT'],
-                    ['right', 'RIGHT'],
-                    ['centre', 'CENTRE']
-                ]), 'ALIGN');
-            this.appendStatementInput('FIELDS')
-                .setCheck('Field');
-            this.setPreviousStatement(true, 'Input');
-            this.setNextStatement(true, 'Input');
-            this.setColour(210);
-            this.setTooltip('For adding fields without any block connections.');
-        }
-    };
-
-    // ========== 字段积木 ==========
-
-    // 静态文本
-    Blockly.Blocks['field_static'] = {
-        init: function(this: Blockly.Block) {
-            this.appendDummyInput()
-                .appendField('text')
-                .appendField(new Blockly.FieldTextInput(''), 'TEXT');
-            this.setPreviousStatement(true, 'Field');
-            this.setNextStatement(true, 'Field');
-            this.setColour(160);
-            this.setTooltip('Static text that serves as a label.');
-        }
-    };
-
-    // 文本输入
-    Blockly.Blocks['field_input'] = {
-        init: function(this: Blockly.Block) {
-            this.appendDummyInput()
-                .appendField('text input')
-                .appendField(new Blockly.FieldTextInput('default'), 'TEXT')
-                .appendField(',')
-                .appendField(new Blockly.FieldTextInput('NAME'), 'FIELDNAME');
-            this.setPreviousStatement(true, 'Field');
-            this.setNextStatement(true, 'Field');
-            this.setColour(160);
-            this.setTooltip('An input field for the user to enter text.');
-        }
-    };
-
-    // 数字输入
-    Blockly.Blocks['field_number'] = {
-        init: function(this: Blockly.Block) {
-            this.appendDummyInput()
-                .appendField('numeric input')
-                .appendField(new Blockly.FieldNumber(0), 'VALUE')
-                .appendField(',')
-                .appendField(new Blockly.FieldTextInput('NAME'), 'FIELDNAME');
-            this.appendDummyInput()
-                .appendField('min')
-                .appendField(new Blockly.FieldNumber(-Infinity), 'MIN')
-                .appendField('max')
-                .appendField(new Blockly.FieldNumber(Infinity), 'MAX')
-                .appendField('precision')
-                .appendField(new Blockly.FieldNumber(0, 0), 'PRECISION');
-            this.setPreviousStatement(true, 'Field');
-            this.setNextStatement(true, 'Field');
-            this.setColour(160);
-            this.setTooltip('An input field for the user to enter a number.');
-        }
-    };
-
-    // 角度输入
-    Blockly.Blocks['field_angle'] = {
-        init: function(this: Blockly.Block) {
-            this.appendDummyInput()
-                .appendField('angle input')
-                .appendField(new Blockly.FieldNumber(90, 0, 360), 'ANGLE')
-                .appendField(',')
-                .appendField(new Blockly.FieldTextInput('NAME'), 'FIELDNAME');
-            this.setPreviousStatement(true, 'Field');
-            this.setNextStatement(true, 'Field');
-            this.setColour(160);
-            this.setTooltip('An input field for the user to enter an angle.');
-        }
-    };
-
-    // 下拉菜单
-    Blockly.Blocks['field_dropdown'] = {
-        init: function(this: Blockly.Block) {
-            this.appendDummyInput()
-                .appendField('dropdown')
-                .appendField(new Blockly.FieldTextInput('NAME'), 'FIELDNAME');
-            this.appendDummyInput()
-                .appendField('•')
-                .appendField(new Blockly.FieldTextInput('option'), 'USER0')
-                .appendField(',')
-                .appendField(new Blockly.FieldTextInput('OPTIONNAME'), 'CPU0');
-            this.appendDummyInput()
-                .appendField('•')
-                .appendField(new Blockly.FieldTextInput('option'), 'USER1')
-                .appendField(',')
-                .appendField(new Blockly.FieldTextInput('OPTIONNAME'), 'CPU1');
-            this.appendDummyInput()
-                .appendField('•')
-                .appendField(new Blockly.FieldTextInput('option'), 'USER2')
-                .appendField(',')
-                .appendField(new Blockly.FieldTextInput('OPTIONNAME'), 'CPU2');
-            this.setPreviousStatement(true, 'Field');
-            this.setNextStatement(true, 'Field');
-            this.setColour(160);
-            this.setTooltip('Dropdown menu with a list of options.');
-        }
-    };
-
-    // 复选框
-    Blockly.Blocks['field_checkbox'] = {
-        init: function(this: Blockly.Block) {
-            this.appendDummyInput()
-                .appendField('checkbox')
-                .appendField(new Blockly.FieldCheckbox('TRUE'), 'CHECKED')
-                .appendField(',')
-                .appendField(new Blockly.FieldTextInput('NAME'), 'FIELDNAME');
-            this.setPreviousStatement(true, 'Field');
-            this.setNextStatement(true, 'Field');
-            this.setColour(160);
-            this.setTooltip('Checkbox field.');
-        }
-    };
-
-    // 颜色选择器
-    Blockly.Blocks['field_colour'] = {
-        init: function(this: Blockly.Block) {
-            this.appendDummyInput()
-                .appendField('colour')
-                .appendField(new Blockly.FieldDropdown([
-                    ['red', '#ff0000'],
-                    ['green', '#00ff00'],
-                    ['blue', '#0000ff'],
-                    ['yellow', '#ffff00'],
-                    ['orange', '#ffa500'],
-                    ['purple', '#800080'],
-                    ['cyan', '#00ffff'],
-                    ['white', '#ffffff'],
-                    ['black', '#000000']
-                ]), 'COLOUR')
-                .appendField(',')
-                .appendField(new Blockly.FieldTextInput('NAME'), 'FIELDNAME');
-            this.setPreviousStatement(true, 'Field');
-            this.setNextStatement(true, 'Field');
-            this.setColour(160);
-            this.setTooltip('Colour input field.');
-        }
-    };
-
-    // 变量
-    Blockly.Blocks['field_variable'] = {
-        init: function(this: Blockly.Block) {
-            this.appendDummyInput()
-                .appendField('variable')
-                .appendField(new Blockly.FieldTextInput('item'), 'TEXT')
-                .appendField(',')
-                .appendField(new Blockly.FieldTextInput('NAME'), 'FIELDNAME');
-            this.setPreviousStatement(true, 'Field');
-            this.setNextStatement(true, 'Field');
-            this.setColour(160);
-            this.setTooltip('Dropdown menu for variable names.');
-        }
-    };
-
-    // 图片
-    Blockly.Blocks['field_image'] = {
-        init: function(this: Blockly.Block) {
-            this.appendDummyInput()
-                .appendField('image')
-                .appendField(new Blockly.FieldTextInput('https://www.gstatic.com/codesite/ph/images/star_on.gif'), 'SRC');
-            this.appendDummyInput()
-                .appendField('width')
-                .appendField(new Blockly.FieldNumber(15, 0), 'WIDTH')
-                .appendField('height')
-                .appendField(new Blockly.FieldNumber(15, 0), 'HEIGHT')
-                .appendField('alt text')
-                .appendField(new Blockly.FieldTextInput('*'), 'ALT');
-            this.setPreviousStatement(true, 'Field');
-            this.setNextStatement(true, 'Field');
-            this.setColour(160);
-            this.setTooltip('Static image (JPEG, PNG, GIF, SVG, BMP).');
-        }
-    };
-
-    // ========== 类型积木 ==========
-
-    // 任意类型
-    Blockly.Blocks['type_null'] = {
-        init: function(this: Blockly.Block) {
-            this.appendDummyInput()
-                .appendField('any');
-            this.setOutput(true, 'Type');
-            this.setColour(230);
-            this.setTooltip('Any type is allowed.');
-        }
-    };
-
-    // 布尔类型
-    Blockly.Blocks['type_boolean'] = {
-        init: function(this: Blockly.Block) {
-            this.appendDummyInput()
-                .appendField('Boolean');
-            this.setOutput(true, 'Type');
-            this.setColour(230);
-            this.setTooltip('Booleans (true/false) are allowed.');
-        }
-    };
-
-    // 数字类型
-    Blockly.Blocks['type_number'] = {
-        init: function(this: Blockly.Block) {
-            this.appendDummyInput()
-                .appendField('Number');
-            this.setOutput(true, 'Type');
-            this.setColour(230);
-            this.setTooltip('Numbers (int/float) are allowed.');
-        }
-    };
-
-    // 字符串类型
-    Blockly.Blocks['type_string'] = {
-        init: function(this: Blockly.Block) {
-            this.appendDummyInput()
-                .appendField('String');
-            this.setOutput(true, 'Type');
-            this.setColour(230);
-            this.setTooltip('Strings (text) are allowed.');
-        }
-    };
-
-    // 数组类型
-    Blockly.Blocks['type_list'] = {
-        init: function(this: Blockly.Block) {
-            this.appendDummyInput()
-                .appendField('Array');
-            this.setOutput(true, 'Type');
-            this.setColour(230);
-            this.setTooltip('Arrays (lists) are allowed.');
-        }
-    };
-
-    // 其他类型
-    Blockly.Blocks['type_other'] = {
-        init: function(this: Blockly.Block) {
-            this.appendDummyInput()
-                .appendField('other')
-                .appendField(new Blockly.FieldTextInput(''), 'TYPE');
-            this.setOutput(true, 'Type');
-            this.setColour(230);
-            this.setTooltip('Custom type to allow.');
-        }
-    };
-
-    // ========== 颜色积木 ==========
-
-    // 色相角度 (使用数字输入 0-360 代替 FieldAngle)
-    Blockly.Blocks['colour_hue'] = {
-        init: function(this: Blockly.Block) {
-            this.appendDummyInput()
-                .appendField('hue:')
-                .appendField(new Blockly.FieldNumber(230, 0, 360, 1), 'HUE');
-            this.setOutput(true, 'Colour');
-            this.setColour(230);
-            this.setTooltip('Paint the block with this colour (0-360 hue).');
-        },
-        mutationToDom: function(this: Blockly.Block) {
-            const container = Blockly.utils.xml.createElement('mutation');
-            container.setAttribute('colour', String(this.getColour()));
-            return container;
-        },
-        domToMutation: function(this: Blockly.Block, container: Element) {
-            const colour = container.getAttribute('colour');
-            if (colour) {
-                this.setColour(colour);
-            }
-        }
-    };
-};
-
-// 类型定义
-interface FactoryBaseBlock extends Blockly.Block {
-    updateShape_(option: string): void;
-}
-
-// Block Factory 工具箱配置 - 与官方 Block Factory 一致
-const factoryToolbox = {
-    kind: 'categoryToolbox',
-    contents: [
-        {
-            kind: 'category',
-            name: 'Input',
-            colour: 210,
-            contents: [
-                { kind: 'block', type: 'input_value' },
-                { kind: 'block', type: 'input_statement' },
-                { kind: 'block', type: 'input_dummy' },
-            ]
-        },
-        {
-            kind: 'category',
-            name: 'Field',
-            colour: 160,
-            contents: [
-                { kind: 'block', type: 'field_static' },
-                { kind: 'block', type: 'field_input' },
-                { kind: 'block', type: 'field_number' },
-                { kind: 'block', type: 'field_angle' },
-                { kind: 'block', type: 'field_dropdown' },
-                { kind: 'block', type: 'field_checkbox' },
-                { kind: 'block', type: 'field_colour' },
-                { kind: 'block', type: 'field_variable' },
-                { kind: 'block', type: 'field_image' },
-            ]
-        },
-        {
-            kind: 'category',
-            name: 'Type',
-            colour: 230,
-            contents: [
-                { kind: 'block', type: 'type_null' },
-                { kind: 'block', type: 'type_boolean' },
-                { kind: 'block', type: 'type_number' },
-                { kind: 'block', type: 'type_string' },
-                { kind: 'block', type: 'type_list' },
-                { kind: 'block', type: 'type_other' },
-            ]
-        },
-        {
-            kind: 'category',
-            name: 'Colour',
-            colour: 20,
-            contents: [
-                { kind: 'block', type: 'colour_hue' },
-            ]
-        },
-    ]
-};
-
-// 初始化 Factory 积木
-let factoryBlocksInitialized = false;
-const initFactoryBlocks = () => {
-    if (factoryBlocksInitialized) return;
-    defineFactoryBlocks();
-    factoryBlocksInitialized = true;
-};
+import { factoryToolbox, initFactoryBlocks } from '../data/blockFactoryConfig';
 
 interface BlockFactoryProps {
     isOpen: boolean;
@@ -533,7 +21,7 @@ const BlockFactory = ({ isOpen, onClose, onSaveBlock }: BlockFactoryProps) => {
     const previewDiv = useRef<HTMLDivElement>(null);
     const workspaceRef = useRef<Blockly.WorkspaceSvg | null>(null);
     const previewWorkspaceRef = useRef<Blockly.WorkspaceSvg | null>(null);
-    
+
     const [blockDefinition, setBlockDefinition] = useState('');
     const [generatorCode, setGeneratorCode] = useState('');
     const [codeHeaders, setCodeHeaders] = useState('');
@@ -541,7 +29,7 @@ const BlockFactory = ({ isOpen, onClose, onSaveBlock }: BlockFactoryProps) => {
     const [format, setFormat] = useState<'JSON' | 'JavaScript'>('JavaScript');
     const [importFormat, setImportFormat] = useState<'script' | 'import'>('import');
     const [generatorLanguage, setGeneratorLanguage] = useState<'Python' | 'JavaScript' | 'C/C++'>('Python');
-    const [savedBlocks, setSavedBlocks] = useState<{name: string, xml: string}[]>([]);
+    const [savedBlocks, setSavedBlocks] = useState<{ name: string, xml: string }[]>([]);
     const [showLibrary, setShowLibrary] = useState(false);
 
     // Block Library 本地存储 key
@@ -550,11 +38,11 @@ const BlockFactory = ({ isOpen, onClose, onSaveBlock }: BlockFactoryProps) => {
     // 生成 Code Headers
     const generateCodeHeaders = useCallback((): string => {
         const headers: string[] = [];
-        
+
         if (importFormat === 'import') {
             headers.push("// Code Headers - Import format");
             headers.push("import * as Blockly from 'blockly';");
-            
+
             switch (generatorLanguage) {
                 case 'Python':
                     headers.push("import {pythonGenerator} from 'blockly/python';");
@@ -571,7 +59,7 @@ const BlockFactory = ({ isOpen, onClose, onSaveBlock }: BlockFactoryProps) => {
             headers.push("// Code Headers - Script tag format");
             headers.push("// Add these script tags to your HTML:");
             headers.push('// <script src="https://unpkg.com/blockly"></script>');
-            
+
             switch (generatorLanguage) {
                 case 'Python':
                     headers.push('// <script src="https://unpkg.com/blockly/python_compressed"></script>');
@@ -587,7 +75,7 @@ const BlockFactory = ({ isOpen, onClose, onSaveBlock }: BlockFactoryProps) => {
             headers.push("// Then access via global Blockly object:");
             headers.push("// const Blockly = window.Blockly;");
         }
-        
+
         return headers.join('\n');
     }, [importFormat, generatorLanguage]);
 
@@ -606,7 +94,7 @@ const BlockFactory = ({ isOpen, onClose, onSaveBlock }: BlockFactoryProps) => {
     const getOptTypesFrom = useCallback((block: Blockly.Block, inputName: string): string | null => {
         const typeBlock = block.getInputTargetBlock(inputName);
         if (!typeBlock) return null;
-        
+
         const type = typeBlock.type;
         if (type === 'type_null') return null;
         if (type === 'type_boolean') return "'Boolean'";
@@ -625,7 +113,7 @@ const BlockFactory = ({ isOpen, onClose, onSaveBlock }: BlockFactoryProps) => {
         const fields: string[] = [];
         while (block) {
             const type = block.type;
-            
+
             if (type === 'field_static') {
                 const text = block.getFieldValue('TEXT') || '';
                 fields.push(JSON.stringify(text));
@@ -639,7 +127,7 @@ const BlockFactory = ({ isOpen, onClose, onSaveBlock }: BlockFactoryProps) => {
                 const min = Number(block.getFieldValue('MIN'));
                 const max = Number(block.getFieldValue('MAX'));
                 const precision = Number(block.getFieldValue('PRECISION')) || 0;
-                
+
                 const args = [value];
                 if (min !== -Infinity || max !== Infinity || precision !== 0) {
                     args.push(min === -Infinity ? -Infinity : min);
@@ -683,7 +171,7 @@ const BlockFactory = ({ isOpen, onClose, onSaveBlock }: BlockFactoryProps) => {
                 const alt = block.getFieldValue('ALT') || '*';
                 fields.push(`new Blockly.FieldImage(${JSON.stringify(src)}, ${width}, ${height}, { alt: ${JSON.stringify(alt)} })`);
             }
-            
+
             block = block.getNextBlock();
         }
         return fields;
@@ -694,14 +182,14 @@ const BlockFactory = ({ isOpen, onClose, onSaveBlock }: BlockFactoryProps) => {
         const code: string[] = [];
         code.push(`Blockly.Blocks['${blockType}'] = {`);
         code.push('  init: function() {');
-        
+
         // 输入类型映射
         const TYPES: Record<string, string> = {
             'input_value': 'appendValueInput',
             'input_statement': 'appendStatementInput',
             'input_dummy': 'appendDummyInput'
         };
-        
+
         // 遍历输入
         let contentsBlock = rootBlock.getInputTargetBlock('INPUTS');
         while (contentsBlock) {
@@ -709,34 +197,34 @@ const BlockFactory = ({ isOpen, onClose, onSaveBlock }: BlockFactoryProps) => {
             if (contentsBlock.type !== 'input_dummy') {
                 inputName = JSON.stringify(contentsBlock.getFieldValue('INPUTNAME') || 'NAME');
             }
-            
+
             code.push(`    this.${TYPES[contentsBlock.type]}(${inputName})`);
-            
+
             // 类型检查
             const check = getOptTypesFrom(contentsBlock, 'TYPE');
             if (check) {
                 code.push(`        .setCheck(${check})`);
             }
-            
+
             // 对齐
             const align = contentsBlock.getFieldValue('ALIGN');
             if (align && align !== 'LEFT') {
                 code.push(`        .setAlign(Blockly.inputs.Align.${align})`);
             }
-            
+
             // 字段
             const fieldsBlock = contentsBlock.getInputTargetBlock('FIELDS');
             const fields = getFieldsJs(fieldsBlock);
             for (const field of fields) {
                 code.push(`        .appendField(${field})`);
             }
-            
+
             // 添加分号
             code[code.length - 1] += ';';
-            
+
             contentsBlock = contentsBlock.getNextBlock();
         }
-        
+
         // 内联设置
         const inline = rootBlock.getFieldValue('INLINE');
         if (inline === 'EXT') {
@@ -744,7 +232,7 @@ const BlockFactory = ({ isOpen, onClose, onSaveBlock }: BlockFactoryProps) => {
         } else if (inline === 'INT') {
             code.push('    this.setInputsInline(true);');
         }
-        
+
         // 连接类型
         const connections = rootBlock.getFieldValue('CONNECTIONS');
         if (connections === 'LEFT') {
@@ -762,7 +250,7 @@ const BlockFactory = ({ isOpen, onClose, onSaveBlock }: BlockFactoryProps) => {
             const bottomType = getOptTypesFrom(rootBlock, 'BOTTOMTYPE');
             code.push(`    this.setNextStatement(true${bottomType ? ', ' + bottomType : ''});`);
         }
-        
+
         // 颜色
         const colourBlock = rootBlock.getInputTargetBlock('COLOUR');
         if (colourBlock) {
@@ -771,20 +259,20 @@ const BlockFactory = ({ isOpen, onClose, onSaveBlock }: BlockFactoryProps) => {
                 code.push(`    this.setColour(${hue});`);
             }
         }
-        
+
         // 提示
         const tooltipBlock = rootBlock.getInputTargetBlock('TOOLTIP');
         const tooltip = tooltipBlock ? (tooltipBlock.getFieldValue('TEXT') || '') : '';
         code.push(`    this.setTooltip(${JSON.stringify(tooltip)});`);
-        
+
         // 帮助URL
         const helpUrlBlock = rootBlock.getInputTargetBlock('HELPURL');
         const helpUrl = helpUrlBlock ? (helpUrlBlock.getFieldValue('TEXT') || '') : '';
         code.push(`    this.setHelpUrl(${JSON.stringify(helpUrl)});`);
-        
+
         code.push('  }');
         code.push('};');
-        
+
         return code.join('\n');
     }, [getOptTypesFrom, getFieldsJs]);
 
@@ -792,11 +280,11 @@ const BlockFactory = ({ isOpen, onClose, onSaveBlock }: BlockFactoryProps) => {
     const formatJson = useCallback((blockType: string, rootBlock: Blockly.Block): string => {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const js: any = { type: blockType };
-        
+
         const message: string[] = [];
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const args: any[] = [];
-        
+
         let contentsBlock = rootBlock.getInputTargetBlock('INPUTS');
         while (contentsBlock) {
             // 处理字段
@@ -811,35 +299,35 @@ const BlockFactory = ({ isOpen, onClose, onSaveBlock }: BlockFactoryProps) => {
                 }
                 fieldBlock = fieldBlock.getNextBlock();
             }
-            
+
             // 处理输入
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const input: any = { type: contentsBlock.type };
             if (contentsBlock.type !== 'input_dummy') {
                 input.name = contentsBlock.getFieldValue('INPUTNAME') || 'NAME';
             }
-            
+
             const typeBlock = contentsBlock.getInputTargetBlock('TYPE');
             if (typeBlock && typeBlock.type !== 'type_null') {
                 input.check = getTypeValue(typeBlock);
             }
-            
+
             const align = contentsBlock.getFieldValue('ALIGN');
             if (align && align !== 'LEFT') {
                 input.align = align;
             }
-            
+
             args.push(input);
             message.push('%' + args.length);
-            
+
             contentsBlock = contentsBlock.getNextBlock();
         }
-        
+
         js.message0 = message.join(' ');
         if (args.length > 0) {
             js.args0 = args;
         }
-        
+
         // 内联
         const inline = rootBlock.getFieldValue('INLINE');
         if (inline === 'EXT') {
@@ -847,7 +335,7 @@ const BlockFactory = ({ isOpen, onClose, onSaveBlock }: BlockFactoryProps) => {
         } else if (inline === 'INT') {
             js.inputsInline = true;
         }
-        
+
         // 连接
         const connections = rootBlock.getFieldValue('CONNECTIONS');
         if (connections === 'LEFT') {
@@ -860,20 +348,20 @@ const BlockFactory = ({ isOpen, onClose, onSaveBlock }: BlockFactoryProps) => {
         } else if (connections === 'BOTTOM') {
             js.nextStatement = getTypeFromInput(rootBlock, 'BOTTOMTYPE');
         }
-        
+
         // 颜色
         const colourBlock = rootBlock.getInputTargetBlock('COLOUR');
         if (colourBlock) {
             js.colour = parseInt(colourBlock.getFieldValue('HUE'), 10) || 230;
         }
-        
+
         // 提示和帮助
         const tooltipBlock = rootBlock.getInputTargetBlock('TOOLTIP');
         js.tooltip = tooltipBlock ? (tooltipBlock.getFieldValue('TEXT') || '') : '';
-        
+
         const helpUrlBlock = rootBlock.getInputTargetBlock('HELPURL');
         js.helpUrl = helpUrlBlock ? (helpUrlBlock.getFieldValue('TEXT') || '') : '';
-        
+
         return JSON.stringify(js, null, 2);
     }, []);
 
@@ -939,14 +427,14 @@ const BlockFactory = ({ isOpen, onClose, onSaveBlock }: BlockFactoryProps) => {
     const generatePythonGenerator = useCallback((blockType: string, rootBlock: Blockly.Block): string => {
         const code: string[] = [];
         const hasOutput = rootBlock.getFieldValue('CONNECTIONS') === 'LEFT';
-        
+
         code.push(`pythonGenerator.forBlock['${blockType}'] = function(block, generator) {`);
-        
+
         // 遍历输入生成变量获取代码
         let contentsBlock = rootBlock.getInputTargetBlock('INPUTS');
         while (contentsBlock) {
             const inputName = contentsBlock.getFieldValue('INPUTNAME') || 'NAME';
-            
+
             // 处理字段
             const fieldsBlock = contentsBlock.getInputTargetBlock('FIELDS');
             let fieldBlock = fieldsBlock;
@@ -963,7 +451,7 @@ const BlockFactory = ({ isOpen, onClose, onSaveBlock }: BlockFactoryProps) => {
                 }
                 fieldBlock = fieldBlock.getNextBlock();
             }
-            
+
             // 处理输入
             if (contentsBlock.type === 'input_value') {
                 const varName = inputName.toLowerCase().replace(/\W/g, '_');
@@ -972,12 +460,12 @@ const BlockFactory = ({ isOpen, onClose, onSaveBlock }: BlockFactoryProps) => {
                 const varName = inputName.toLowerCase().replace(/\W/g, '_');
                 code.push(`  var statements_${varName} = generator.statementToCode(block, '${inputName}');`);
             }
-            
+
             contentsBlock = contentsBlock.getNextBlock();
         }
-        
+
         code.push("  // TODO: Assemble python into code variable.");
-        
+
         if (hasOutput) {
             code.push("  var code = '...';");
             code.push("  // TODO: Change python.Order.NONE to the correct strength.");
@@ -986,29 +474,29 @@ const BlockFactory = ({ isOpen, onClose, onSaveBlock }: BlockFactoryProps) => {
             code.push("  var code = '...\\n';");
             code.push("  return code;");
         }
-        
+
         code.push("};");
-        
+
         return code.join('\n');
     }, []);
 
     // JavaScript 代码生成器
     const generateJavaScriptGenerator = useCallback((blockType: string, rootBlock: Blockly.Block): string => {
         const code: string[] = [];
-        
+
         code.push("// JavaScript code generator for " + blockType);
         code.push("import {javascriptGenerator, Order} from 'blockly/javascript';");
         code.push("");
         code.push(`javascriptGenerator.forBlock['${blockType}'] = function(block, generator) {`);
-        
+
         const connections = rootBlock.getFieldValue('CONNECTIONS');
         const hasOutput = connections === 'LEFT';
-        
+
         let contentsBlock = rootBlock.getInputTargetBlock('INPUTS');
         while (contentsBlock) {
             const inputName = contentsBlock.getFieldValue('INPUTNAME') || 'NAME';
             const fieldsBlock = contentsBlock.getInputTargetBlock('FIELDS');
-            
+
             let fieldBlock = fieldsBlock;
             while (fieldBlock) {
                 const fieldName = fieldBlock.getFieldValue('FIELDNAME');
@@ -1027,7 +515,7 @@ const BlockFactory = ({ isOpen, onClose, onSaveBlock }: BlockFactoryProps) => {
                 }
                 fieldBlock = fieldBlock.getNextBlock();
             }
-            
+
             if (contentsBlock.type === 'input_value') {
                 const varName = inputName.toLowerCase().replace(/\W/g, '_');
                 code.push(`  var value_${varName} = generator.valueToCode(block, '${inputName}', Order.ATOMIC);`);
@@ -1035,12 +523,12 @@ const BlockFactory = ({ isOpen, onClose, onSaveBlock }: BlockFactoryProps) => {
                 const varName = inputName.toLowerCase().replace(/\W/g, '_');
                 code.push(`  var statements_${varName} = generator.statementToCode(block, '${inputName}');`);
             }
-            
+
             contentsBlock = contentsBlock.getNextBlock();
         }
-        
+
         code.push("  // TODO: Assemble JavaScript into code variable.");
-        
+
         if (hasOutput) {
             code.push("  var code = '...';");
             code.push("  // TODO: Change Order.NONE to the correct strength.");
@@ -1049,16 +537,16 @@ const BlockFactory = ({ isOpen, onClose, onSaveBlock }: BlockFactoryProps) => {
             code.push("  var code = '...;\\n';");
             code.push("  return code;");
         }
-        
+
         code.push("};");
-        
+
         return code.join('\n');
     }, []);
 
     // C/C++ 代码生成器
     const generateCppGenerator = useCallback((blockType: string, rootBlock: Blockly.Block): string => {
         const code: string[] = [];
-        
+
         code.push("// C/C++ code generator for " + blockType);
         code.push("// Note: Blockly doesn't have a built-in C/C++ generator.");
         code.push("// You need to create a custom generator or use a community plugin.");
@@ -1068,15 +556,15 @@ const BlockFactory = ({ isOpen, onClose, onSaveBlock }: BlockFactoryProps) => {
         code.push("// const cppGenerator = new Blockly.Generator('C++');");
         code.push("");
         code.push(`cppGenerator.forBlock['${blockType}'] = function(block, generator) {`);
-        
+
         const connections = rootBlock.getFieldValue('CONNECTIONS');
         const hasOutput = connections === 'LEFT';
-        
+
         let contentsBlock = rootBlock.getInputTargetBlock('INPUTS');
         while (contentsBlock) {
             const inputName = contentsBlock.getFieldValue('INPUTNAME') || 'NAME';
             const fieldsBlock = contentsBlock.getInputTargetBlock('FIELDS');
-            
+
             let fieldBlock = fieldsBlock;
             while (fieldBlock) {
                 const fieldName = fieldBlock.getFieldValue('FIELDNAME');
@@ -1093,7 +581,7 @@ const BlockFactory = ({ isOpen, onClose, onSaveBlock }: BlockFactoryProps) => {
                 }
                 fieldBlock = fieldBlock.getNextBlock();
             }
-            
+
             if (contentsBlock.type === 'input_value') {
                 const varName = inputName.toLowerCase().replace(/\W/g, '_');
                 code.push(`  var value_${varName} = generator.valueToCode(block, '${inputName}', generator.ORDER_ATOMIC);`);
@@ -1101,13 +589,13 @@ const BlockFactory = ({ isOpen, onClose, onSaveBlock }: BlockFactoryProps) => {
                 const varName = inputName.toLowerCase().replace(/\W/g, '_');
                 code.push(`  var statements_${varName} = generator.statementToCode(block, '${inputName}');`);
             }
-            
+
             contentsBlock = contentsBlock.getNextBlock();
         }
-        
+
         code.push("  // TODO: Assemble C/C++ code into code variable.");
         code.push("  // Remember C/C++ specific syntax: semicolons, braces, types, etc.");
-        
+
         if (hasOutput) {
             code.push("  var code = '/* expression */';");
             code.push("  return [code, generator.ORDER_NONE];");
@@ -1115,7 +603,7 @@ const BlockFactory = ({ isOpen, onClose, onSaveBlock }: BlockFactoryProps) => {
             code.push("  var code = '/* statement */;\\n';");
             code.push("  return code;");
         }
-        
+
         code.push("};");
         code.push("");
         code.push("// C/C++ specific notes:");
@@ -1123,23 +611,23 @@ const BlockFactory = ({ isOpen, onClose, onSaveBlock }: BlockFactoryProps) => {
         code.push("// - Include necessary headers (#include <stdio.h>)");
         code.push("// - Handle memory management if needed");
         code.push("// - Consider using Arduino-specific functions for embedded projects");
-        
+
         return code.join('\n');
     }, []);
 
     // 主要的代码生成函数
     const generateBlockCode = useCallback(() => {
         if (!workspaceRef.current) return;
-        
+
         const rootBlock = getRootBlock(workspaceRef.current);
         if (!rootBlock) {
             setBlockDefinition('// Add inputs and other blocks to the factory_base block');
             setGeneratorCode('// No generator code yet');
             return;
         }
-        
+
         const blockType = (rootBlock.getFieldValue('NAME') || 'block_type').trim().toLowerCase().replace(/\W/g, '_');
-        
+
         // 根据格式生成代码
         let blockDef: string;
         if (format === 'JSON') {
@@ -1147,7 +635,7 @@ const BlockFactory = ({ isOpen, onClose, onSaveBlock }: BlockFactoryProps) => {
         } else {
             blockDef = formatJavaScript(blockType, rootBlock);
         }
-        
+
         // 根据语言生成代码生成器
         let genCode: string;
         switch (generatorLanguage) {
@@ -1162,14 +650,14 @@ const BlockFactory = ({ isOpen, onClose, onSaveBlock }: BlockFactoryProps) => {
                 genCode = generatePythonGenerator(blockType, rootBlock);
                 break;
         }
-        
+
         // 生成 Code Headers
         const headers = generateCodeHeaders();
-        
+
         setCodeHeaders(headers);
         setBlockDefinition(blockDef);
         setGeneratorCode(genCode);
-        
+
         // 更新预览
         updatePreview(blockType, rootBlock);
     }, [format, generatorLanguage, getRootBlock, formatJavaScript, formatJson, generatePythonGenerator, generateJavaScriptGenerator, generateCppGenerator, generateCodeHeaders]);
@@ -1185,30 +673,30 @@ const BlockFactory = ({ isOpen, onClose, onSaveBlock }: BlockFactoryProps) => {
             // 获取颜色
             const colourBlock = rootBlock.getInputTargetBlock('COLOUR');
             const hue = colourBlock ? (parseInt(colourBlock.getFieldValue('HUE'), 10) || 230) : 230;
-            
+
             // 获取提示
             const tooltipBlock = rootBlock.getInputTargetBlock('TOOLTIP');
             const tooltip = tooltipBlock ? (tooltipBlock.getFieldValue('TEXT') || '') : '';
 
             // 临时注册预览积木
             const previewBlockName = `preview_${Date.now()}`;
-            
+
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             (Blockly.Blocks as any)[previewBlockName] = {
-                init: function(this: Blockly.Block) {
+                init: function (this: Blockly.Block) {
                     // 解析输入
                     let inputBlock = rootBlock.getInputTargetBlock('INPUTS');
                     while (inputBlock) {
                         const inputType = inputBlock.type;
-                        
+
                         if (inputType === 'input_value') {
                             const inputName = inputBlock.getFieldValue('INPUTNAME') || 'NAME';
                             const input = this.appendValueInput(inputName);
-                            
+
                             // 添加字段
                             const fieldsBlock = inputBlock.getInputTargetBlock('FIELDS');
                             addFieldsToInput(input, fieldsBlock);
-                            
+
                             // 类型检查
                             const typeBlock = inputBlock.getInputTargetBlock('TYPE');
                             if (typeBlock && typeBlock.type !== 'type_null') {
@@ -1217,18 +705,18 @@ const BlockFactory = ({ isOpen, onClose, onSaveBlock }: BlockFactoryProps) => {
                         } else if (inputType === 'input_statement') {
                             const inputName = inputBlock.getFieldValue('INPUTNAME') || 'NAME';
                             const input = this.appendStatementInput(inputName);
-                            
+
                             // 添加字段
                             const fieldsBlock = inputBlock.getInputTargetBlock('FIELDS');
                             addFieldsToInput(input, fieldsBlock);
                         } else if (inputType === 'input_dummy') {
                             const input = this.appendDummyInput();
-                            
+
                             // 添加字段
                             const fieldsBlock = inputBlock.getInputTargetBlock('FIELDS');
                             addFieldsToInput(input, fieldsBlock);
                         }
-                        
+
                         inputBlock = inputBlock.getNextBlock();
                     }
 
@@ -1279,7 +767,7 @@ const BlockFactory = ({ isOpen, onClose, onSaveBlock }: BlockFactoryProps) => {
     const addFieldsToInput = (input: Blockly.Input, fieldBlock: Blockly.Block | null) => {
         while (fieldBlock) {
             const fieldType = fieldBlock.type;
-            
+
             if (fieldType === 'field_static') {
                 const text = fieldBlock.getFieldValue('TEXT') || '';
                 input.appendField(text);
@@ -1320,7 +808,7 @@ const BlockFactory = ({ isOpen, onClose, onSaveBlock }: BlockFactoryProps) => {
                 const alt = fieldBlock.getFieldValue('ALT') || '*';
                 input.appendField(new Blockly.FieldImage(src, width, height, alt));
             }
-            
+
             fieldBlock = fieldBlock.getNextBlock();
         }
     };
@@ -1468,7 +956,7 @@ const BlockFactory = ({ isOpen, onClose, onSaveBlock }: BlockFactoryProps) => {
 
         const newBlocks = [...savedBlocks.filter(b => b.name !== blockName), { name: blockName, xml: xmlText }];
         setSavedBlocks(newBlocks);
-        
+
         try {
             localStorage.setItem(STORAGE_KEY, JSON.stringify(newBlocks));
             alert(`积木 "${blockName}" 已保存到库`);
@@ -1479,7 +967,7 @@ const BlockFactory = ({ isOpen, onClose, onSaveBlock }: BlockFactoryProps) => {
     }, [workspaceRef, getRootBlock, savedBlocks, STORAGE_KEY]);
 
     // 从 Library 加载积木
-    const loadFromLibrary = useCallback((blockData: {name: string, xml: string}) => {
+    const loadFromLibrary = useCallback((blockData: { name: string, xml: string }) => {
         if (!workspaceRef.current) return;
 
         try {
@@ -1497,10 +985,10 @@ const BlockFactory = ({ isOpen, onClose, onSaveBlock }: BlockFactoryProps) => {
     // 从 Library 删除积木
     const deleteFromLibrary = useCallback((blockName: string) => {
         if (!confirm(`确定删除积木 "${blockName}" 吗？`)) return;
-        
+
         const newBlocks = savedBlocks.filter(b => b.name !== blockName);
         setSavedBlocks(newBlocks);
-        
+
         try {
             localStorage.setItem(STORAGE_KEY, JSON.stringify(newBlocks));
         } catch (e) {
@@ -1578,19 +1066,19 @@ const BlockFactory = ({ isOpen, onClose, onSaveBlock }: BlockFactoryProps) => {
                         {/* 代码输出区 */}
                         <div className="block-factory-code-section">
                             <div className="block-factory-tabs">
-                                <button 
+                                <button
                                     className={`tab-btn ${activeTab === 'headers' ? 'active' : ''}`}
                                     onClick={() => setActiveTab('headers')}
                                 >
                                     Headers
                                 </button>
-                                <button 
+                                <button
                                     className={`tab-btn ${activeTab === 'definition' ? 'active' : ''}`}
                                     onClick={() => setActiveTab('definition')}
                                 >
                                     积木定义
                                 </button>
-                                <button 
+                                <button
                                     className={`tab-btn ${activeTab === 'generator' ? 'active' : ''}`}
                                     onClick={() => setActiveTab('generator')}
                                 >
@@ -1598,7 +1086,7 @@ const BlockFactory = ({ isOpen, onClose, onSaveBlock }: BlockFactoryProps) => {
                                 </button>
                             </div>
                             <div className="block-factory-options">
-                                <select 
+                                <select
                                     className="format-select"
                                     value={importFormat}
                                     onChange={(e) => setImportFormat(e.target.value as 'script' | 'import')}
@@ -1607,7 +1095,7 @@ const BlockFactory = ({ isOpen, onClose, onSaveBlock }: BlockFactoryProps) => {
                                     <option value="import">import</option>
                                     <option value="script">&lt;script&gt;</option>
                                 </select>
-                                <select 
+                                <select
                                     className="format-select"
                                     value={format}
                                     onChange={(e) => setFormat(e.target.value as 'JSON' | 'JavaScript')}
@@ -1616,7 +1104,7 @@ const BlockFactory = ({ isOpen, onClose, onSaveBlock }: BlockFactoryProps) => {
                                     <option value="JavaScript">JS 定义</option>
                                     <option value="JSON">JSON 定义</option>
                                 </select>
-                                <select 
+                                <select
                                     className="format-select"
                                     value={generatorLanguage}
                                     onChange={(e) => setGeneratorLanguage(e.target.value as 'Python' | 'JavaScript' | 'C/C++')}
@@ -1629,7 +1117,7 @@ const BlockFactory = ({ isOpen, onClose, onSaveBlock }: BlockFactoryProps) => {
                             </div>
                             <div className="block-factory-code">
                                 <pre>{activeTab === 'headers' ? codeHeaders : activeTab === 'definition' ? blockDefinition : generatorCode}</pre>
-                                <button 
+                                <button
                                     className="copy-btn"
                                     onClick={() => handleCopy(activeTab === 'headers' ? codeHeaders : activeTab === 'definition' ? blockDefinition : generatorCode)}
                                 >

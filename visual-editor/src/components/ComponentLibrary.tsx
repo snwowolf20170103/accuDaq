@@ -7,7 +7,10 @@ const ComponentLibrary = () => {
     const [openCategories, setOpenCategories] = useState<Record<string, boolean>>({
         'device': true,
         'comm': false,
+        'protocol': false,
+        'algorithm': false,
         'logic': false,
+        'control': false,
         'storage': false
     })
 
@@ -82,7 +85,10 @@ const ComponentLibrary = () => {
     const categories = [
         { id: 'device', title: 'Devices', items: componentLibrary.filter(c => c.category === 'device') },
         { id: 'comm', title: 'Communication', items: componentLibrary.filter(c => c.category === 'comm') },
+        { id: 'protocol', title: 'Industrial Protocols', items: componentLibrary.filter(c => c.category === 'protocol') },
+        { id: 'algorithm', title: 'Algorithms', items: componentLibrary.filter(c => c.category === 'algorithm') },
         { id: 'logic', title: 'Logic', items: componentLibrary.filter(c => c.category === 'logic') },
+        { id: 'control', title: 'Control', items: componentLibrary.filter(c => c.category === 'control') },
         { id: 'storage', title: 'Storage', items: componentLibrary.filter(c => c.category === 'storage') },
     ]
 

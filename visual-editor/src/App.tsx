@@ -1,9 +1,5 @@
-import { useState, useCallback, useMemo, useRef, useEffect } from 'react'
+import { useState, useCallback, useMemo, useRef, useEffect, lazy, Suspense } from 'react'
 import {
-    ReactFlow,
-    Background,
-    Controls,
-    MiniMap,
     addEdge,
     useNodesState,
     useEdgesState,
@@ -14,60 +10,29 @@ import {
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
 
-import ComponentLibrary from './components/ComponentLibrary'
-import PropertyPanel from './components/PropertyPanel'
-import Toolbar from './components/Toolbar'
-import DAQNode from './components/DAQNode'
 import NewProjectDialog from './components/NewProjectDialog'
 import SaveProjectDialog from './components/SaveProjectDialog'
-import CodeView from './components/CodeView'
 import { ComponentDefinition, DAQNodeData, DAQProject, DAQWidget, EditorMode } from './types'
 import { v4 as uuidv4 } from 'uuid'
 import componentLibrary from './data/componentLibrary'
-import DataFlowEdge from './components/DataFlowEdge'
 
-const nodeTypes = {
-    daqNode: DAQNode,
-}
+// Lazy-loaded components for code splitting
+const DevicePanel = lazy(() => import('./components/DevicePanel'))
+const AIChat = lazy(() => import('./components/AIChat'))
+const DaqEngine = lazy(() => import('./components/DaqEngine'))
+const CICDPanel = lazy(() => import('./components/CICDPanel'))
+const DataFlowDebugger = lazy(() => import('./components/DataFlowDebugger'))
+const AIAssistantPanel = lazy(() => import('./components/AIAssistantPanel'))
+const GitPanel = lazy(() => import('./components/GitPanel'))
 
-const edgeTypes = {
-    dataflow: DataFlowEdge,
-}
-
-const defaultEdgeOptions = {
-    type: 'dataflow',
-    animated: false,
-};
-
-const miniMapNodeColor = (node: any) => {
-    const category = (node.data as unknown as DAQNodeData).category
-    switch (category) {
-        case 'device': return '#4a90d9'
-        case 'logic': return '#9b59b6'
-        case 'storage': return '#27ae60'
-        case 'comm': return '#e67e22'
-        default: return '#888'
-    }
-}
-
-import DashboardDesigner from './components/DashboardDesigner'
-import DevicePanel from './components/DevicePanel'
-import AIChat from './components/AIChat'
-import DaqEngine from './components/DaqEngine'
-import FlowDesigner from './components/FlowDesigner'
-import CICDPanel from './components/CICDPanel'
 import { SettingsPanel } from './components/SettingsPanel'
-// New imports for unintegrated components
-import IndustryWidgets from './components/IndustryWidgets'
-import BlocklyEditor from './components/BlocklyEditor'
-import CommLogViewer from './components/CommLogViewer'
-import DataReplayPanel from './components/DataReplayPanel'
-import HistoryDataViewer from './components/HistoryDataViewer'
-import TaskSchedulerPanel from './components/TaskSchedulerPanel'
-// Debug and AI components
-import DataFlowDebugger from './components/DataFlowDebugger'
-import AIAssistantPanel from './components/AIAssistantPanel'
-import GitPanel from './components/GitPanel'
+import { I18nProvider } from './i18n'
+import { useEdgeData, startEdgeDataTracking } from './hooks/useEdgeData'
+import { useHistory } from './hooks/useHistory'
+import { useClipboard } from './hooks/useClipboard'
+import { TopNavBar, PanelsContainer } from './components/layout'
+
+
 
 // Toast notification component
 interface ToastProps {
@@ -137,114 +102,92 @@ function App() {
     const [showAIAssistant, setShowAIAssistant] = useState(false)
     const [showGitPanel, setShowGitPanel] = useState(false)
     // Edge data for live visualization
-    const [edgeDataMap, setEdgeDataMap] = useState<Record<string, any>>({})
     const [showEdgeData, setShowEdgeData] = useState(true)
     const { screenToFlowPosition, getZoom, getNode } = useReactFlow()
 
-    // Live data visualization (Backend + Demo)
+    // Live data visualization using SWR (replaces manual polling)
+    const { edgeDataMap, error: edgeDataError } = useEdgeData(edges, {
+        enabled: isRunning && showEdgeData,
+        refreshInterval: 500,
+    })
+
+    // Undo/Redo & Clipboard Hooks
+    const { undo, redo, canUndo, canRedo } = useHistory(nodes, edges)
+    const { copy, paste } = useClipboard()
+
+    const handleUndo = useCallback(() => {
+        const previousState = undo()
+        if (previousState) {
+            setNodes(previousState.nodes)
+            setEdges(previousState.edges)
+        }
+    }, [undo, setNodes, setEdges])
+
+    const handleRedo = useCallback(() => {
+        const nextState = redo()
+        if (nextState) {
+            setNodes(nextState.nodes)
+            setEdges(nextState.edges)
+        }
+    }, [redo, setNodes, setEdges])
+
+    const handleCopy = useCallback(() => {
+        copy(nodes, edges)
+    }, [copy, nodes, edges])
+
+    const handlePaste = useCallback(() => {
+        const result = paste(nodes, edges, screenToFlowPosition({ x: window.innerWidth / 2, y: window.innerHeight / 2 }))
+        if (result) {
+            setNodes(result.nodes)
+            setEdges(result.edges)
+        }
+    }, [paste, nodes, edges, screenToFlowPosition, setNodes, setEdges])
+
+    // Keyboard shortcuts
     useEffect(() => {
-        if (!isRunning || !showEdgeData) {
-            setEdgeDataMap({})
-            return
-        }
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (['INPUT', 'TEXTAREA'].includes((e.target as HTMLElement).tagName)) return
 
-        // Check if we are in "Demo Mode" (pure frontend simulation)
-        // We can use a heuristic: if we have never received backend data, maybe use simulation?
-        // But better to just try fetching backend data first.
-
-        let isPolling = true;
-
-        // Start backend tracking if not already
-        fetch('/api/edge/data/start', { method: 'POST' }).catch(err => console.warn('Debug start failed', err));
-
-        const interval = setInterval(async () => {
-            if (!isPolling) return;
-
-            try {
-                const res = await fetch('/api/edge/data');
-                if (res.ok) {
-                    const backendData = await res.json();
-
-                    const newDataMap: Record<string, any> = {};
-                    let hasBackendData = Object.keys(backendData).length > 0;
-
-                    edges.forEach(edge => {
-                        // 1. Try to find real data from backend
-                        // Key format: source___sourceHandle___target___targetHandle
-                        const key = `${edge.source}___${edge.sourceHandle || ''}___${edge.target}___${edge.targetHandle || ''}`;
-
-                        if (backendData[key] !== undefined) {
-                            newDataMap[edge.id] = backendData[key];
-                        }
-                        // 2. Fallback to simulation ONLY if we are in explicit Demo Mode (isDemoMode prop)
-                        // But here we rely on the state. For now, if no backend data found, 
-                        // we can simulate IF the user clicked the "Demo" button specifically.
-                        // However, isRunning is shared. 
-                        // Let's assume if backendData is empty, we MIGHT be in demo mode? 
-                        // Actually, let's keep the Demo button behavior strictly for simulation
-                        // and the Run button for real data.
-
-                        // We need to know if this is a "Demo Run" or "Real Run".
-                        // currently we don't distinguish in state.
-                        // Let's use a simple trick: if the URL query param ?demo=true matches? No.
-
-                        // For now: mixed mode. 
-                        else if (!hasBackendData) {
-                            // Simulation logic (fallback) - reserved for future use
-                            const sourceHandle = edge.sourceHandle || ''
-                            let _simulatedValue: any
-                            if (sourceHandle.includes('value') || sourceHandle.includes('result')) {
-                                _simulatedValue = Math.round((Math.sin(Date.now() / 1000) + 1) * 50 * 100) / 100
-                            } else if (sourceHandle.includes('alarm') || sourceHandle.includes('exceeded')) {
-                                _simulatedValue = Math.random() > 0.7
-                            } else if (sourceHandle.includes('data')) {
-                                _simulatedValue = { temp: Math.round(Math.random() * 40), ts: Date.now() }
-                            } else {
-                                _simulatedValue = Math.round(Math.random() * 100 * 100) / 100
-                            }
-                            // Note: _simulatedValue is computed but not used yet.
-                            // This is reserved for demo mode without backend.
-                            void _simulatedValue
-                        }
-                    })
-
-                    // If we have backend data, prioritize it. 
-                    // If backend data is empty, check if we should simulate.
-                    // We will allow the "Demo Button" simulation logic to run 
-                    // if NO backend data is present.
-
-                    if (hasBackendData) {
-                        setEdgeDataMap(prev => ({ ...prev, ...newDataMap }));
-                    } else {
-                        // Check if we should simulate (if enabled via Demo button)
-                        const simMap: Record<string, any> = {};
-                        edges.forEach(edge => {
-                            const sourceHandle = edge.sourceHandle || ''
-                            let value: any
-                            if (sourceHandle.includes('value') || sourceHandle.includes('result')) {
-                                value = Math.round((Math.sin(Date.now() / 1000) + 1) * 50 * 100) / 100
-                            } else if (sourceHandle.includes('alarm')) {
-                                value = Math.random() > 0.7
-                            } else {
-                                value = Math.round(Math.random() * 100);
-                            }
-                            simMap[edge.id] = value;
-                        });
-                        // Only set sim map if we think we are in demo mode (no backend updates)
-                        // This is a bit Hacky but smooth.
-                        setEdgeDataMap(simMap);
-                    }
+            if (e.ctrlKey || e.metaKey) {
+                switch (e.key.toLowerCase()) {
+                    case 'z':
+                        e.preventDefault()
+                        if (e.shiftKey) handleRedo(); else handleUndo();
+                        break
+                    case 'y':
+                        e.preventDefault()
+                        handleRedo()
+                        break
+                    case 'c':
+                        e.preventDefault()
+                        handleCopy()
+                        break
+                    case 'v':
+                        e.preventDefault()
+                        handlePaste()
+                        break
                 }
-            } catch (e) {
-                console.warn('Poll error', e);
             }
-        }, 500);
-
-        return () => {
-            isPolling = false;
-            clearInterval(interval);
         }
-    }, [isRunning, showEdgeData, edges])
+        window.addEventListener('keydown', handleKeyDown)
+        return () => window.removeEventListener('keydown', handleKeyDown)
+    }, [handleUndo, handleRedo, handleCopy, handlePaste])
+
+
+
+    // Start edge data tracking when running starts
+    useEffect(() => {
+        if (isRunning && showEdgeData) {
+            startEdgeDataTracking()
+        }
+    }, [isRunning, showEdgeData])
+
+    // Log edge data errors
+    useEffect(() => {
+        if (edgeDataError) {
+            console.warn('Edge data fetch error:', edgeDataError)
+        }
+    }, [edgeDataError])
 
     const showToast = useCallback((message: string, type: 'success' | 'error' | 'info' = 'info') => {
         setToast({ message, type })
@@ -603,53 +546,54 @@ function App() {
         }
     }, [isRunning])
 
+    // Optimization: Pre-compute port lookups for O(1) access during connection validation
+    const nodePortMap = useMemo(() => {
+        const map = new Map<string, { inputs: Map<string, any>, outputs: Map<string, any> }>()
+        nodes.forEach(node => {
+            const data = node.data as unknown as DAQNodeData
+            map.set(node.id, {
+                inputs: new Map((data.inputs || []).map(p => [p.id, p])),
+                outputs: new Map((data.outputs || []).map(p => [p.id, p]))
+            })
+        })
+        return map
+    }, [nodes])
+
     // Connection validation: check port type compatibility
     const isValidConnection = useCallback((connection: Edge | Connection) => {
-        // Handle both Edge and Connection types
-        const source = connection.source;
-        const target = connection.target;
-        const sourceHandle = connection.sourceHandle ?? null;
-        const targetHandle = connection.targetHandle ?? null;
+        const sourceId = connection.source
+        const targetId = connection.target
+        const sourceHandle = connection.sourceHandle
+        const targetHandle = connection.targetHandle
 
-        if (!source || !target) return false;
-        if (!sourceHandle || !targetHandle) return false;
+        if (!sourceId || !targetId || !sourceHandle || !targetHandle) return false
 
-        const sourceNode = getNode(source);
-        const targetNode = getNode(target);
+        // Fast O(1) lookup using memoized map
+        const sourceNodePorts = nodePortMap.get(sourceId)
+        const targetNodePorts = nodePortMap.get(targetId)
 
-        if (!sourceNode || !targetNode) return false;
+        if (!sourceNodePorts || !targetNodePorts) return false
 
-        // Find port definitions
-        const sourcePort = (sourceNode.data as unknown as DAQNodeData).outputs?.find(
-            (p: any) => p.id === sourceHandle
-        );
-        const targetPort = (targetNode.data as unknown as DAQNodeData).inputs?.find(
-            (p: any) => p.id === targetHandle
-        );
+        const sourcePort = sourceNodePorts.outputs.get(sourceHandle)
+        const targetPort = targetNodePorts.inputs.get(targetHandle)
 
         if (!sourcePort || !targetPort) {
-            // console.warn('Port not found:', sourceHandle, targetHandle);
-            return false;
+            return false
         }
 
         // Type compatibility rules
-        const sourceType = sourcePort.type;
-        const targetType = targetPort.type;
+        const sourceType = sourcePort.type
+        const targetType = targetPort.type
 
         // 'any' type accepts all
-        if (targetType === 'any') return true;
-        if (sourceType === 'any') return true;
+        if (targetType === 'any') return true
+        if (sourceType === 'any') return true
 
         // Exact type match
-        if (sourceType === targetType) return true;
+        if (sourceType === targetType) return true
 
-        // 'object' can connect to 'any' (already covered above)
-        // 'number' can connect to 'number' or 'any'
-        // etc.
-
-        // console.warn(`Type mismatch: ${sourceType} -> ${targetType}`);
-        return false;
-    }, [getNode]);
+        return false
+    }, [nodePortMap])
 
     const onConnect = useCallback(
         (params: Connection) => {
@@ -1107,10 +1051,58 @@ function App() {
         }))
     }, [nodes, debugMode, executingNodeId, breakpoints, toggleBreakpoint])
 
+    // Memoized edge data mapping to prevent re-renders (Vercel: rerender-memo)
+    const edgesWithData = useMemo(() => {
+        return edges.map(e => ({
+            ...e,
+            data: {
+                ...e.data,
+                value: edgeDataMap[e.id],
+                showValue: showEdgeData && isRunning
+            }
+        }))
+    }, [edges, edgeDataMap, showEdgeData, isRunning])
+
+    // Memoized available outputs for DashboardDesigner (Vercel: rerender-memo)
+    const availableOutputs = useMemo(() => {
+        return nodes.flatMap(node => {
+            const nodeData = node.data as any
+            return (nodeData.outputs || []).map((output: any) => ({
+                nodeId: node.id,
+                nodeLabel: nodeData.label || node.id,
+                portId: output.id,
+                portName: output.name
+            }))
+        })
+    }, [nodes])
+
+    // Stable callbacks for dashboard handlers (Vercel: rerender-functional-setstate)
+    const handleWidgetsChange = useCallback((newWidgets: any) => {
+        setDashboardWidgets(newWidgets)
+        const savedProject = localStorage.getItem('daq-project')
+        if (savedProject) {
+            const project = JSON.parse(savedProject)
+            project.ui = { ...project.ui, widgets: newWidgets }
+            localStorage.setItem('daq-project', JSON.stringify(project))
+        }
+    }, [])
+
+    const handleLayoutChange = useCallback((newLayout: any) => {
+        setDashboardLayout(newLayout)
+        const savedProject = localStorage.getItem('daq-project')
+        if (savedProject) {
+            const project = JSON.parse(savedProject)
+            project.ui = { ...project.ui, layout: newLayout }
+            localStorage.setItem('daq-project', JSON.stringify(project))
+        }
+    }, [])
+
+
+
     return (
         <div style={{ display: 'flex', flexDirection: 'column', height: '100vh' }} className={debugMode ? 'debug-mode' : ''}>
             {/* Toast Notification */}
-            {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
+            {toast ? <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} /> : null}
 
             {/* New Project Dialog */}
             <NewProjectDialog
@@ -1126,609 +1118,106 @@ function App() {
                 currentName={projectName}
             />
 
-            {/* Top Navigation Bar */}
-            <div style={{
-                height: 50,
-                background: '#16213e',
-                borderBottom: '1px solid #2a2a4a',
-                display: 'flex',
-                alignItems: 'center',
-                padding: '0 20px',
-                justifyContent: 'space-between'
-            }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-                    <span style={{ fontSize: 20 }}>🚀</span>
-                    <span style={{ fontWeight: 700, color: '#fff' }}>DAQ IDE</span>
-                    <span style={{ color: '#888', fontSize: 13 }}>|</span>
-                    <span style={{ color: '#4a90d9', fontSize: 14, fontWeight: 500 }}>{projectName}</span>
-                    <button
-                        onClick={() => setShowNewProjectDialog(true)}
-                        style={{
-                            background: '#2a2a4a',
-                            border: 'none',
-                            color: '#fff',
-                            padding: '4px 12px',
-                            borderRadius: 4,
-                            cursor: 'pointer',
-                            fontSize: 12,
-                            fontWeight: 500,
-                        }}
-                    >
-                        + New
-                    </button>
-                    <button
-                        onClick={() => setShowSaveDialog(true)}
-                        title="保存项目到文件"
-                        style={{
-                            background: '#2a2a4a',
-                            border: 'none',
-                            color: '#fff',
-                            padding: '4px 12px',
-                            borderRadius: 4,
-                            cursor: 'pointer',
-                            fontSize: 12,
-                            fontWeight: 500,
-                        }}
-                    >
-                        💾 Save
-                    </button>
-                    <button
-                        onClick={() => { fetchRecentProjects(); setShowProjectList(true) }}
-                        title="打开已保存的项目"
-                        style={{
-                            background: '#2a2a4a',
-                            border: 'none',
-                            color: '#fff',
-                            padding: '4px 12px',
-                            borderRadius: 4,
-                            cursor: 'pointer',
-                            fontSize: 12,
-                            fontWeight: 500,
-                        }}
-                    >
-                        📂 Open
-                    </button>
-                </div>
-
-                <div style={{ display: 'flex', background: '#0f0f1a', borderRadius: 6, padding: 4 }}>
-                    <button
-                        onClick={() => { setView('editor'); setEditorMode('visual') }}
-                        style={{
-                            background: view === 'editor' && editorMode === 'visual' ? '#2a2a4a' : 'transparent',
-                            color: view === 'editor' && editorMode === 'visual' ? '#fff' : '#888',
-                            border: 'none',
-                            padding: '6px 16px',
-                            borderRadius: 4,
-                            cursor: 'pointer',
-                            fontWeight: 500,
-                            transition: 'all 0.2s'
-                        }}
-                    >
-                        📊 Visual
-                    </button>
-                    <button
-                        onClick={() => { setView('editor'); setEditorMode('code') }}
-                        style={{
-                            background: view === 'editor' && editorMode === 'code' ? '#2a2a4a' : 'transparent',
-                            color: view === 'editor' && editorMode === 'code' ? '#fff' : '#888',
-                            border: 'none',
-                            padding: '6px 16px',
-                            borderRadius: 4,
-                            cursor: 'pointer',
-                            fontWeight: 500,
-                            transition: 'all 0.2s'
-                        }}
-                    >
-                        💻 Code
-                    </button>
-                    <button
-                        onClick={() => setView('dashboard')}
-                        style={{
-                            background: view === 'dashboard' ? '#2a2a4a' : 'transparent',
-                            color: view === 'dashboard' ? '#fff' : '#888',
-                            border: 'none',
-                            padding: '6px 16px',
-                            borderRadius: 4,
-                            cursor: 'pointer',
-                            fontWeight: 500,
-                            transition: 'all 0.2s'
-                        }}
-                    >
-                        Dashboard
-                    </button>
-                    <button
-                        onClick={() => setView('flowdesigner')}
-                        style={{
-                            background: view === 'flowdesigner' ? '#2a2a4a' : 'transparent',
-                            color: view === 'flowdesigner' ? '#fff' : '#888',
-                            border: 'none',
-                            padding: '6px 16px',
-                            borderRadius: 4,
-                            cursor: 'pointer',
-                            fontWeight: 500,
-                            transition: 'all 0.2s'
-                        }}
-                    >
-                        🔧 流程
-                    </button>
-                    <button
-                        onClick={() => setView('industry')}
-                        style={{
-                            background: view === 'industry' ? '#2a2a4a' : 'transparent',
-                            color: view === 'industry' ? '#fff' : '#888',
-                            border: 'none',
-                            padding: '6px 16px',
-                            borderRadius: 4,
-                            cursor: 'pointer',
-                            fontWeight: 500,
-                            transition: 'all 0.2s'
-                        }}
-                    >
-                        🏭 工业控件
-                    </button>
-                    <button
-                        onClick={() => setView('blockly')}
-                        style={{
-                            background: view === 'blockly' ? '#2a2a4a' : 'transparent',
-                            color: view === 'blockly' ? '#fff' : '#888',
-                            border: 'none',
-                            padding: '6px 16px',
-                            borderRadius: 4,
-                            cursor: 'pointer',
-                            fontWeight: 500,
-                            transition: 'all 0.2s'
-                        }}
-                    >
-                        🧩 Blockly
-                    </button>
-                    <button
-                        onClick={() => setView('commlog')}
-                        style={{
-                            background: view === 'commlog' ? '#2a2a4a' : 'transparent',
-                            color: view === 'commlog' ? '#fff' : '#888',
-                            border: 'none',
-                            padding: '6px 16px',
-                            borderRadius: 4,
-                            cursor: 'pointer',
-                            fontWeight: 500,
-                            transition: 'all 0.2s'
-                        }}
-                    >
-                        📡 通信日志
-                    </button>
-                    <button
-                        onClick={() => setView('replay')}
-                        style={{
-                            background: view === 'replay' ? '#2a2a4a' : 'transparent',
-                            color: view === 'replay' ? '#fff' : '#888',
-                            border: 'none',
-                            padding: '6px 16px',
-                            borderRadius: 4,
-                            cursor: 'pointer',
-                            fontWeight: 500,
-                            transition: 'all 0.2s'
-                        }}
-                    >
-                        ⏪ 数据回放
-                    </button>
-                    <button
-                        onClick={() => setView('history')}
-                        style={{
-                            background: view === 'history' ? '#2a2a4a' : 'transparent',
-                            color: view === 'history' ? '#fff' : '#888',
-                            border: 'none',
-                            padding: '6px 16px',
-                            borderRadius: 4,
-                            cursor: 'pointer',
-                            fontWeight: 500,
-                            transition: 'all 0.2s'
-                        }}
-                    >
-                        📊 历史数据
-                    </button>
-                    <button
-                        onClick={() => setView('scheduler')}
-                        style={{
-                            background: view === 'scheduler' ? '#2a2a4a' : 'transparent',
-                            color: view === 'scheduler' ? '#fff' : '#888',
-                            border: 'none',
-                            padding: '6px 16px',
-                            borderRadius: 4,
-                            cursor: 'pointer',
-                            fontWeight: 500,
-                            transition: 'all 0.2s'
-                        }}
-                    >
-                        ⏰ 任务调度
-                    </button>
-                    {view === 'dashboard' && (
-                        <button
-                            onClick={() => setDashboardEditMode(!dashboardEditMode)}
-                            style={{
-                                background: dashboardEditMode ? '#4fc3f7' : '#3c3c3c',
-                                color: '#fff',
-                                border: 'none',
-                                padding: '6px 12px',
-                                borderRadius: 4,
-                                cursor: 'pointer',
-                                fontWeight: 500,
-                                fontSize: 12,
-                                marginLeft: 8,
-                            }}
-                        >
-                            {dashboardEditMode ? '🔓 编辑中' : '🔒 已锁定'}
-                        </button>
-                    )}
-                </div>
-
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    {/* Debug Mode Toggle */}
-                    {view === 'editor' && editorMode === 'visual' && (
-                        <button
-                            onClick={() => setShowDevicePanel(!showDevicePanel)}
-                            style={{
-                                background: showDevicePanel ? '#9b59b6' : '#2a2a4a',
-                                color: '#fff',
-                                border: 'none',
-                                padding: '6px 12px',
-                                borderRadius: 4,
-                                cursor: 'pointer',
-                                fontWeight: 500,
-                                fontSize: 12,
-                            }}
-                        >
-                            📡 {showDevicePanel ? '组件库' : '设备'}
-                        </button>
-                    )}
-                    <button
-                        onClick={() => setShowAIAssistant(!showAIAssistant)}
-                        style={{
-                            background: showAIAssistant ? '#9b59b6' : '#2a2a4a',
-                            color: '#fff',
-                            border: 'none',
-                            padding: '6px 12px',
-                            borderRadius: 4,
-                            cursor: 'pointer',
-                            fontWeight: 500,
-                            fontSize: 12,
-                        }}
-                    >
-                        🤖 AI 助手
-                    </button>
-                    <button
-                        onClick={() => setShowDebugger(!showDebugger)}
-                        style={{
-                            background: showDebugger ? '#3498db' : '#2a2a4a',
-                            color: '#fff',
-                            border: 'none',
-                            padding: '6px 12px',
-                            borderRadius: 4,
-                            cursor: 'pointer',
-                            fontWeight: 500,
-                            fontSize: 12,
-                        }}
-                        title="数据流调试器"
-                    >
-                        🔍 调试器
-                    </button>
-                    <button
-                        onClick={toggleDebugMode}
-                        style={{
-                            background: debugMode ? '#e67e22' : '#2a2a4a',
-                            color: '#fff',
-                            border: 'none',
-                            padding: '6px 12px',
-                            borderRadius: 4,
-                            cursor: 'pointer',
-                            fontWeight: 500,
-                            fontSize: 12,
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 4,
-                        }}
-                        title={debugMode ? 'Disable Debug Mode' : 'Enable Debug Mode'}
-                    >
-                        🐛 {debugMode ? 'Debug ON' : 'Debug'}
-                    </button>
-                    <button
-                        onClick={() => setShowCICDPanel(true)}
-                        style={{
-                            background: '#2a2a4a',
-                            color: '#fff',
-                            border: 'none',
-                            padding: '6px 12px',
-                            borderRadius: 4,
-                            cursor: 'pointer',
-                            fontWeight: 500,
-                            fontSize: 12,
-                        }}
-                    >
-                        🔧 CI/CD
-                    </button>
-                    <button
-                        onClick={() => setShowGitPanel(!showGitPanel)}
-                        style={{
-                            background: showGitPanel ? '#f1502f' : '#2a2a4a',
-                            color: '#fff',
-                            border: 'none',
-                            padding: '6px 12px',
-                            borderRadius: 4,
-                            cursor: 'pointer',
-                            fontWeight: 500,
-                            fontSize: 12,
-                        }}
-                    >
-                        📦 Git
-                    </button>
-                    <button
-                        onClick={() => setShowSettingsPanel(true)}
-                        style={{
-                            background: '#2a2a4a',
-                            color: '#fff',
-                            border: 'none',
-                            padding: '6px 12px',
-                            borderRadius: 4,
-                            cursor: 'pointer',
-                            fontWeight: 500,
-                            fontSize: 12,
-                        }}
-                    >
-                        ⚙️ 设置
-                    </button>
-
-                    <button
-                        onClick={toggleRun}
-                        style={{
-                            background: isRunning ? '#e74c3c' : '#2ecc71',
-                            color: '#fff',
-                            border: 'none',
-                            padding: '6px 16px',
-                            borderRadius: 4,
-                            cursor: 'pointer',
-                            fontWeight: 700,
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 6,
-                            boxShadow: '0 0 10px ' + (isRunning ? 'rgba(231, 76, 60, 0.4)' : 'rgba(46, 204, 113, 0.4)')
-                        }}
-                    >
-                        {isRunning ? '🛑 STOP' : '▶️ RUN'}
-                    </button>
-                </div>
-            </div>
+            {/* Top Navigation Bar - Extracted component */}
+            <TopNavBar
+                projectName={projectName}
+                view={view}
+                editorMode={editorMode}
+                isRunning={isRunning}
+                debugMode={debugMode}
+                dashboardEditMode={dashboardEditMode}
+                showDevicePanel={showDevicePanel}
+                showAIAssistant={showAIAssistant}
+                showDebugger={showDebugger}
+                showGitPanel={showGitPanel}
+                onNewProject={() => setShowNewProjectDialog(true)}
+                onSaveProject={() => setShowSaveDialog(true)}
+                onOpenProject={() => { fetchRecentProjects(); setShowProjectList(true) }}
+                onSetView={setView}
+                onSetEditorMode={setEditorMode}
+                onToggleRun={toggleRun}
+                onToggleDebugMode={toggleDebugMode}
+                onToggleDashboardEditMode={() => setDashboardEditMode(!dashboardEditMode)}
+                onToggleDevicePanel={() => setShowDevicePanel(!showDevicePanel)}
+                onToggleAIAssistant={() => setShowAIAssistant(!showAIAssistant)}
+                onToggleDebugger={() => setShowDebugger(!showDebugger)}
+                onToggleGitPanel={() => setShowGitPanel(!showGitPanel)}
+                onShowCICD={() => setShowCICDPanel(true)}
+                onShowSettings={() => setShowSettingsPanel(true)}
+            />
 
             <div style={{ flex: 1, overflow: 'hidden' }}>
-                {view === 'editor' ? (
-                    editorMode === 'visual' ? (
-                        <div className="app-container">
-                            {showDevicePanel ? (
-                                <DevicePanel />
-                            ) : (
-                                <ComponentLibrary />
-                            )}
-
-                            <div className="canvas-container">
-                                <Toolbar
-                                    onExport={exportProject}
-                                    onImport={importProject}
-                                    onCompile={compileProject}
-                                    onDelete={deleteSelectedNode}
-                                    hasSelection={!!selectedNode}
-                                    isRunning={isRunning}
-                                    onToggleRun={toggleRun}
-                                    csvPath={getCsvPath()}
-                                    onDemoMode={() => {
-                                        if (isRunning) {
-                                            // Stop demo
-                                            setIsRunning(false)
-                                            setShowEdgeData(false)
-                                        } else {
-                                            // Start demo
-                                            setIsRunning(true)
-                                            setShowEdgeData(true)
-                                        }
-                                    }}
-                                    isDemoMode={isRunning}
-                                />
-
-                                <div className="canvas-wrapper">
-                                    <ReactFlow
-                                        nodes={nodesWithDebug}
-                                        edges={edges.map(e => ({
-                                            ...e,
-                                            data: {
-                                                ...e.data,
-                                                value: edgeDataMap[e.id],
-                                                showValue: showEdgeData && isRunning
-                                            }
-                                        }))}
-                                        onNodesChange={onNodesChange}
-                                        onEdgesChange={onEdgesChange}
-                                        onConnect={onConnect}
-                                        onNodeClick={onNodeClick}
-                                        onPaneClick={onPaneClick}
-                                        onDragOver={onDragOver}
-                                        onDrop={onDrop}
-                                        nodeTypes={nodeTypes}
-                                        edgeTypes={edgeTypes}
-                                        snapToGrid={false}
-                                        nodesDraggable={true}
-                                        nodesConnectable={true}
-                                        elementsSelectable={true}
-                                        selectNodesOnDrag={false}
-                                        multiSelectionKeyCode="Shift"
-                                        panOnDrag={true}
-                                        minZoom={0.2}
-                                        maxZoom={4}
-                                        defaultEdgeOptions={defaultEdgeOptions}
-                                    >
-                                        <Background color="#2a2a4a" gap={20} />
-                                        <Controls />
-                                        <MiniMap
-                                            nodeColor={miniMapNodeColor}
-                                            maskColor="rgba(26, 26, 46, 0.7)"
-                                            style={{
-                                                backgroundColor: '#0f0f1a',
-                                                height: 150,
-                                                width: 200
-                                            }}
-                                            zoomable
-                                            pannable
-                                        />
-                                    </ReactFlow>
-                                </div>
-
-                                {/* Debug Info Panel */}
-                                {debugMode && (
-                                    <div style={{
-                                        position: 'absolute',
-                                        bottom: 10,
-                                        left: 10,
-                                        background: 'rgba(230, 126, 34, 0.9)',
-                                        color: '#fff',
-                                        padding: '8px 16px',
-                                        borderRadius: 6,
-                                        fontSize: 12,
-                                        fontWeight: 500,
-                                        zIndex: 100,
-                                    }}>
-                                        🐛 Debug Mode Active | Breakpoints: {breakpoints.length} | {executingNodeId ? `Executing: ${executingNodeId}` : 'Idle'}
-                                        {executingNodeId && (
-                                            <button
-                                                onClick={continueFromBreakpoint}
-                                                style={{
-                                                    marginLeft: 12,
-                                                    background: '#27ae60',
-                                                    color: '#fff',
-                                                    border: 'none',
-                                                    padding: '4px 12px',
-                                                    borderRadius: 4,
-                                                    cursor: 'pointer',
-                                                    fontWeight: 500,
-                                                }}
-                                            >
-                                                ▶️ Continue
-                                            </button>
-                                        )}
-                                    </div>
-                                )}
-
-                                {/* Edge Data Visualization Toggle */}
-                                {isRunning && (
-                                    <div style={{
-                                        position: 'absolute',
-                                        bottom: 10,
-                                        right: 340,
-                                        background: showEdgeData ? 'rgba(34, 197, 94, 0.9)' : 'rgba(100, 116, 139, 0.9)',
-                                        color: '#fff',
-                                        padding: '8px 16px',
-                                        borderRadius: 6,
-                                        fontSize: 12,
-                                        fontWeight: 500,
-                                        zIndex: 100,
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: 8,
-                                        cursor: 'pointer',
-                                        transition: 'all 0.2s',
-                                    }}
-                                        onClick={() => setShowEdgeData(!showEdgeData)}
-                                    >
-                                        {showEdgeData ? '📊' : '📉'} Data Flow: {showEdgeData ? 'ON' : 'OFF'}
-                                    </div>
-                                )}
-                            </div>
-
-                            <PropertyPanel
-                                node={selectedNodeData}
-                                onPropertyChange={updateNodeProperty}
-                            />
-                        </div>
-                    ) : (
-                        <CodeView
-                            nodes={nodes}
-                            edges={edges}
-                            onBack={() => setEditorMode('visual')}
-                        />
-                    )
-                ) : view === 'dashboard' ? (
-                    <DashboardDesigner
-                        editMode={dashboardEditMode}
-                        isRunning={isRunning}
-                        widgets={dashboardWidgets as any}
-                        layout={dashboardLayout}
-                        availableOutputs={nodes.flatMap(node => {
-                            const nodeData = node.data as any
-                            return (nodeData.outputs || []).map((output: any) => ({
-                                nodeId: node.id,
-                                nodeLabel: nodeData.label || node.id,
-                                portId: output.id,
-                                portName: output.name
-                            }))
-                        })}
-                        onWidgetsChange={(newWidgets) => {
-                            setDashboardWidgets(newWidgets as any)
-                            // Save to localStorage
-                            const savedProject = localStorage.getItem('daq-project')
-                            if (savedProject) {
-                                const project = JSON.parse(savedProject)
-                                project.ui = { ...project.ui, widgets: newWidgets }
-                                localStorage.setItem('daq-project', JSON.stringify(project))
-                            }
-                        }}
-                        onLayoutChange={(newLayout) => {
-                            setDashboardLayout(newLayout)
-                            // Save to localStorage
-                            const savedProject = localStorage.getItem('daq-project')
-                            if (savedProject) {
-                                const project = JSON.parse(savedProject)
-                                project.ui = { ...project.ui, layout: newLayout }
-                                localStorage.setItem('daq-project', JSON.stringify(project))
-                            }
-                        }}
-                    />
-                ) : view === 'flowdesigner' ? (
-                    <FlowDesigner
-                        onFlowChange={(flow) => {
-                            console.log('Flow updated:', flow)
-                            // Could save to project state here
-                        }}
-                        onNodeSelect={(node) => {
-                            console.log('Node selected:', node)
-                        }}
-                    />
-                ) : view === 'industry' ? (
-                    <IndustryWidgets />
-                ) : view === 'blockly' ? (
-                    <BlocklyEditor />
-                ) : view === 'commlog' ? (
-                    <CommLogViewer onClose={() => setView('flowdesigner')} />
-                ) : view === 'replay' ? (
-                    <DataReplayPanel />
-                ) : view === 'history' ? (
-                    <HistoryDataViewer />
-                ) : view === 'scheduler' ? (
-                    <TaskSchedulerPanel />
-                ) : null}
-                <DaqEngine nodes={nodes} isRunning={isRunning} />
+                <PanelsContainer
+                    view={view}
+                    editorMode={editorMode}
+                    onSetEditorMode={setEditorMode}
+                    onSetView={setView}
+                    editorCanvasProps={{
+                        nodes: nodesWithDebug,
+                        edges: edgesWithData,
+                        selectedNode,
+                        selectedNodeData,
+                        onNodesChange,
+                        onEdgesChange,
+                        onConnect,
+                        onNodeClick,
+                        onPaneClick,
+                        onDragOver,
+                        onDrop,
+                        onPropertyChange: updateNodeProperty,
+                        onExport: exportProject,
+                        onImport: importProject,
+                        onCompile: compileProject,
+                        onDelete: deleteSelectedNode,
+                        onToggleRun: toggleRun,
+                        csvPath: getCsvPath(),
+                        isRunning,
+                        debugMode,
+                        breakpoints,
+                        executingNodeId,
+                        onContinueFromBreakpoint: continueFromBreakpoint,
+                        showEdgeData,
+                        onToggleEdgeData: () => setShowEdgeData(!showEdgeData),
+                        onUndo: handleUndo,
+                        onRedo: handleRedo,
+                        canUndo,
+                        canRedo,
+                        showDevicePanel,
+                        DevicePanelComponent: DevicePanel
+                    }}
+                    dashboardProps={{
+                        editMode: dashboardEditMode,
+                        isRunning,
+                        widgets: dashboardWidgets,
+                        layout: dashboardLayout,
+                        availableOutputs,
+                        onWidgetsChange: handleWidgetsChange,
+                        onLayoutChange: handleLayoutChange
+                    }}
+                />
+                <Suspense fallback={null}><DaqEngine nodes={nodes} isRunning={isRunning} /></Suspense>
             </div>
 
             {/* AI Chat Panel */}
-            <AIChat
-                isOpen={showAIChat}
-                onClose={() => setShowAIChat(false)}
-                projectContext={{
-                    nodes,
-                    edges,
-                    projectName
-                }}
-            />
+            <Suspense fallback={null}>
+                <AIChat
+                    isOpen={showAIChat}
+                    onClose={() => setShowAIChat(false)}
+                    projectContext={{
+                        nodes,
+                        edges,
+                        projectName
+                    }}
+                />
+            </Suspense>
 
             {/* CI/CD Panel */}
-            <CICDPanel
-                isOpen={showCICDPanel}
-                onClose={() => setShowCICDPanel(false)}
-            />
+            <Suspense fallback={null}>
+                <CICDPanel
+                    isOpen={showCICDPanel}
+                    onClose={() => setShowCICDPanel(false)}
+                />
+            </Suspense>
 
             {/* Settings Panel */}
             <SettingsPanel
@@ -1737,276 +1226,288 @@ function App() {
             />
 
             {/* Project List Dialog */}
-            {showProjectList && (
-                <div style={{
-                    position: 'fixed',
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    background: 'rgba(0,0,0,0.7)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    zIndex: 1000,
-                }}>
+            {
+                showProjectList && (
                     <div style={{
-                        background: '#1e1e2e',
-                        borderRadius: 16,
-                        padding: 24,
-                        minWidth: 600,
-                        maxWidth: 800,
-                        maxHeight: '80vh',
-                        overflow: 'auto',
+                        position: 'fixed',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        background: 'rgba(0,0,0,0.7)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        zIndex: 1000,
                     }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-                            <h2 style={{ color: '#fff', margin: 0 }}>📂 项目管理</h2>
-                            <div style={{ display: 'flex', gap: 8 }}>
-                                <input
-                                    ref={importProjectRef}
-                                    type="file"
-                                    accept=".daq,.json"
-                                    onChange={handleImportProject}
-                                    style={{ display: 'none' }}
-                                />
-                                <button
-                                    onClick={() => importProjectRef.current?.click()}
-                                    style={{
-                                        background: '#27ae60',
-                                        border: 'none',
-                                        color: '#fff',
-                                        padding: '6px 12px',
-                                        borderRadius: 6,
-                                        cursor: 'pointer',
-                                        fontSize: 12,
-                                    }}
-                                >
-                                    📤 导入
-                                </button>
-                                <button
-                                    onClick={() => setShowProjectList(false)}
-                                    style={{
-                                        background: 'rgba(255,255,255,0.1)',
-                                        border: 'none',
-                                        color: '#fff',
-                                        width: 32,
-                                        height: 32,
-                                        borderRadius: 8,
-                                        cursor: 'pointer',
-                                    }}
-                                >
-                                    ✕
-                                </button>
-                            </div>
-                        </div>
-
-                        {recentProjects.length === 0 ? (
-                            <div style={{ color: '#888', textAlign: 'center', padding: 40 }}>
-                                暂无已保存的项目
-                            </div>
-                        ) : (
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                                {recentProjects.map((project) => (
-                                    <div
-                                        key={project.fileName}
+                        <div style={{
+                            background: '#1e1e2e',
+                            borderRadius: 16,
+                            padding: 24,
+                            minWidth: 600,
+                            maxWidth: 800,
+                            maxHeight: '80vh',
+                            overflow: 'auto',
+                        }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+                                <h2 style={{ color: '#fff', margin: 0 }}>📂 项目管理</h2>
+                                <div style={{ display: 'flex', gap: 8 }}>
+                                    <input
+                                        ref={importProjectRef}
+                                        type="file"
+                                        accept=".daq,.json"
+                                        onChange={handleImportProject}
+                                        style={{ display: 'none' }}
+                                    />
+                                    <button
+                                        onClick={() => importProjectRef.current?.click()}
                                         style={{
-                                            background: '#2a2a4a',
-                                            padding: '12px 16px',
-                                            borderRadius: 8,
-                                            display: 'flex',
-                                            justifyContent: 'space-between',
-                                            alignItems: 'center',
+                                            background: '#27ae60',
+                                            border: 'none',
+                                            color: '#fff',
+                                            padding: '6px 12px',
+                                            borderRadius: 6,
+                                            cursor: 'pointer',
+                                            fontSize: 12,
                                         }}
                                     >
+                                        📤 导入
+                                    </button>
+                                    <button
+                                        onClick={() => setShowProjectList(false)}
+                                        style={{
+                                            background: 'rgba(255,255,255,0.1)',
+                                            border: 'none',
+                                            color: '#fff',
+                                            width: 32,
+                                            height: 32,
+                                            borderRadius: 8,
+                                            cursor: 'pointer',
+                                        }}
+                                    >
+                                        ✕
+                                    </button>
+                                </div>
+                            </div>
+
+                            {recentProjects.length === 0 ? (
+                                <div style={{ color: '#888', textAlign: 'center', padding: 40 }}>
+                                    暂无已保存的项目
+                                </div>
+                            ) : (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                                    {recentProjects.map((project) => (
                                         <div
-                                            style={{ flex: 1, cursor: 'pointer' }}
-                                            onClick={() => loadProjectFromFile(project.fileName)}
+                                            key={project.fileName}
+                                            style={{
+                                                background: '#2a2a4a',
+                                                padding: '12px 16px',
+                                                borderRadius: 8,
+                                                display: 'flex',
+                                                justifyContent: 'space-between',
+                                                alignItems: 'center',
+                                            }}
                                         >
-                                            <div style={{ color: '#fff', fontWeight: 500 }}>{project.name}</div>
-                                            <div style={{ color: '#888', fontSize: 12 }}>
-                                                {project.fileName} · {new Date(project.modifiedAt).toLocaleString()}
+                                            <div
+                                                style={{ flex: 1, cursor: 'pointer' }}
+                                                onClick={() => loadProjectFromFile(project.fileName)}
+                                            >
+                                                <div style={{ color: '#fff', fontWeight: 500 }}>{project.name}</div>
+                                                <div style={{ color: '#888', fontSize: 12 }}>
+                                                    {project.fileName} · {new Date(project.modifiedAt).toLocaleString()}
+                                                </div>
+                                            </div>
+                                            <div style={{ display: 'flex', gap: 4 }}>
+                                                <button
+                                                    onClick={(e) => { e.stopPropagation(); setRenameDialog({ show: true, fileName: project.fileName, currentName: project.name }); setNewProjectName(project.name); }}
+                                                    title="重命名"
+                                                    style={{ background: 'rgba(255,255,255,0.1)', border: 'none', color: '#fff', padding: '4px 8px', borderRadius: 4, cursor: 'pointer', fontSize: 12 }}
+                                                >
+                                                    ✏️
+                                                </button>
+                                                <button
+                                                    onClick={(e) => { e.stopPropagation(); duplicateProject(project.fileName, project.name); }}
+                                                    title="复制"
+                                                    style={{ background: 'rgba(255,255,255,0.1)', border: 'none', color: '#fff', padding: '4px 8px', borderRadius: 4, cursor: 'pointer', fontSize: 12 }}
+                                                >
+                                                    📋
+                                                </button>
+                                                <button
+                                                    onClick={(e) => { e.stopPropagation(); downloadSavedProject(project.fileName); }}
+                                                    title="下载"
+                                                    style={{ background: 'rgba(255,255,255,0.1)', border: 'none', color: '#fff', padding: '4px 8px', borderRadius: 4, cursor: 'pointer', fontSize: 12 }}
+                                                >
+                                                    📥
+                                                </button>
+                                                <button
+                                                    onClick={(e) => { e.stopPropagation(); deleteProject(project.fileName); }}
+                                                    title="删除"
+                                                    style={{ background: 'rgba(231,76,60,0.3)', border: 'none', color: '#e74c3c', padding: '4px 8px', borderRadius: 4, cursor: 'pointer', fontSize: 12 }}
+                                                >
+                                                    🗑️
+                                                </button>
                                             </div>
                                         </div>
-                                        <div style={{ display: 'flex', gap: 4 }}>
-                                            <button
-                                                onClick={(e) => { e.stopPropagation(); setRenameDialog({ show: true, fileName: project.fileName, currentName: project.name }); setNewProjectName(project.name); }}
-                                                title="重命名"
-                                                style={{ background: 'rgba(255,255,255,0.1)', border: 'none', color: '#fff', padding: '4px 8px', borderRadius: 4, cursor: 'pointer', fontSize: 12 }}
-                                            >
-                                                ✏️
-                                            </button>
-                                            <button
-                                                onClick={(e) => { e.stopPropagation(); duplicateProject(project.fileName, project.name); }}
-                                                title="复制"
-                                                style={{ background: 'rgba(255,255,255,0.1)', border: 'none', color: '#fff', padding: '4px 8px', borderRadius: 4, cursor: 'pointer', fontSize: 12 }}
-                                            >
-                                                📋
-                                            </button>
-                                            <button
-                                                onClick={(e) => { e.stopPropagation(); downloadSavedProject(project.fileName); }}
-                                                title="下载"
-                                                style={{ background: 'rgba(255,255,255,0.1)', border: 'none', color: '#fff', padding: '4px 8px', borderRadius: 4, cursor: 'pointer', fontSize: 12 }}
-                                            >
-                                                📥
-                                            </button>
-                                            <button
-                                                onClick={(e) => { e.stopPropagation(); deleteProject(project.fileName); }}
-                                                title="删除"
-                                                style={{ background: 'rgba(231,76,60,0.3)', border: 'none', color: '#e74c3c', padding: '4px 8px', borderRadius: 4, cursor: 'pointer', fontSize: 12 }}
-                                            >
-                                                🗑️
-                                            </button>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-                    </div>
-                </div>
-            )}
-
-            {/* Rename Dialog */}
-            {renameDialog.show && (
-                <div style={{
-                    position: 'fixed',
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    background: 'rgba(0,0,0,0.8)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    zIndex: 1100,
-                }}>
-                    <div style={{
-                        background: '#1e1e2e',
-                        borderRadius: 12,
-                        padding: 24,
-                        minWidth: 400,
-                    }}>
-                        <h3 style={{ color: '#fff', margin: '0 0 16px 0' }}>重命名项目</h3>
-                        <input
-                            type="text"
-                            value={newProjectName}
-                            onChange={(e) => setNewProjectName(e.target.value)}
-                            placeholder="输入新名称"
-                            style={{
-                                width: '100%',
-                                padding: '10px 12px',
-                                background: '#2a2a4a',
-                                border: '1px solid #3a3a5a',
-                                borderRadius: 6,
-                                color: '#fff',
-                                fontSize: 14,
-                                boxSizing: 'border-box',
-                            }}
-                            onKeyDown={(e) => { if (e.key === 'Enter') renameProject(); }}
-                            autoFocus
-                        />
-                        <div style={{ display: 'flex', gap: 8, marginTop: 16, justifyContent: 'flex-end' }}>
-                            <button
-                                onClick={() => setRenameDialog({ show: false, fileName: '', currentName: '' })}
-                                style={{ background: 'rgba(255,255,255,0.1)', border: 'none', color: '#fff', padding: '8px 16px', borderRadius: 6, cursor: 'pointer' }}
-                            >
-                                取消
-                            </button>
-                            <button
-                                onClick={renameProject}
-                                style={{ background: '#3498db', border: 'none', color: '#fff', padding: '8px 16px', borderRadius: 6, cursor: 'pointer' }}
-                            >
-                                确定
-                            </button>
+                                    ))}
+                                </div>
+                            )}
                         </div>
                     </div>
-                </div>
-            )}
+                )
+            }
+
+            {/* Rename Dialog */}
+            {
+                renameDialog.show && (
+                    <div style={{
+                        position: 'fixed',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        background: 'rgba(0,0,0,0.8)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        zIndex: 1100,
+                    }}>
+                        <div style={{
+                            background: '#1e1e2e',
+                            borderRadius: 12,
+                            padding: 24,
+                            minWidth: 400,
+                        }}>
+                            <h3 style={{ color: '#fff', margin: '0 0 16px 0' }}>重命名项目</h3>
+                            <input
+                                type="text"
+                                value={newProjectName}
+                                onChange={(e) => setNewProjectName(e.target.value)}
+                                placeholder="输入新名称"
+                                style={{
+                                    width: '100%',
+                                    padding: '10px 12px',
+                                    background: '#2a2a4a',
+                                    border: '1px solid #3a3a5a',
+                                    borderRadius: 6,
+                                    color: '#fff',
+                                    fontSize: 14,
+                                    boxSizing: 'border-box',
+                                }}
+                                onKeyDown={(e) => { if (e.key === 'Enter') renameProject(); }}
+                                autoFocus
+                            />
+                            <div style={{ display: 'flex', gap: 8, marginTop: 16, justifyContent: 'flex-end' }}>
+                                <button
+                                    onClick={() => setRenameDialog({ show: false, fileName: '', currentName: '' })}
+                                    style={{ background: 'rgba(255,255,255,0.1)', border: 'none', color: '#fff', padding: '8px 16px', borderRadius: 6, cursor: 'pointer' }}
+                                >
+                                    取消
+                                </button>
+                                <button
+                                    onClick={renameProject}
+                                    style={{ background: '#3498db', border: 'none', color: '#fff', padding: '8px 16px', borderRadius: 6, cursor: 'pointer' }}
+                                >
+                                    确定
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )
+            }
 
             {/* Data Flow Debugger Panel */}
-            <DataFlowDebugger
-                isOpen={showDebugger}
-                onClose={() => setShowDebugger(false)}
-                isRunning={false}
-                nodes={nodes}
-                edges={edges}
-                executingNodeId={executingNodeId}
-                breakpoints={breakpoints}
-                onToggleBreakpoint={(nodeId) => {
-                    setBreakpoints(prev =>
-                        prev.includes(nodeId)
-                            ? prev.filter(id => id !== nodeId)
-                            : [...prev, nodeId]
-                    )
-                }}
-                onStepOver={() => { /* TODO: Implement step over */ }}
-                onContinue={() => { /* TODO: Implement continue */ }}
-                onPause={() => { /* TODO: Implement pause */ }}
-            />
+            <Suspense fallback={null}>
+                <DataFlowDebugger
+                    isOpen={showDebugger}
+                    onClose={() => setShowDebugger(false)}
+                    isRunning={false}
+                    nodes={nodes}
+                    edges={edges}
+                    executingNodeId={executingNodeId}
+                    breakpoints={breakpoints}
+                    onToggleBreakpoint={(nodeId) => {
+                        setBreakpoints(prev =>
+                            prev.includes(nodeId)
+                                ? prev.filter(id => id !== nodeId)
+                                : [...prev, nodeId]
+                        )
+                    }}
+                    onStepOver={() => { /* TODO: Implement step over */ }}
+                    onContinue={() => { /* TODO: Implement continue */ }}
+                    onPause={() => { /* TODO: Implement pause */ }}
+                />
+            </Suspense>
 
             {/* AI Assistant Panel */}
-            <AIAssistantPanel
-                isOpen={showAIAssistant}
-                onClose={() => setShowAIAssistant(false)}
-                projectContext={{
-                    nodes,
-                    edges,
-                    projectName,
-                }}
-                onAddComponent={(suggestion) => {
-                    // Add suggested component to canvas
-                    const newNode = {
-                        id: `${suggestion.type}-${Date.now()}`,
-                        type: 'daqNode',
-                        position: { x: 400, y: 300 },
-                        data: {
-                            label: suggestion.name,
-                            componentType: suggestion.type,
-                            category: suggestion.category,
-                            icon: suggestion.icon,
-                            inputs: [],
-                            outputs: [],
-                            properties: suggestion.properties || {},
-                        },
-                    }
-                    setNodes(nds => [...nds, newNode])
-                    showToast(`已添加 ${suggestion.name}`, 'success')
-                }}
-                onApplyCode={(code, nodeId) => {
-                    // Apply generated code to custom script node
-                    if (nodeId) {
-                        setNodes(nds => nds.map(n => {
-                            if (n.id === nodeId) {
-                                return {
-                                    ...n,
-                                    data: {
-                                        ...n.data,
-                                        properties: {
-                                            ...n.data.properties,
-                                            generatedCode: code,
+            <Suspense fallback={null}>
+                <AIAssistantPanel
+                    isOpen={showAIAssistant}
+                    onClose={() => setShowAIAssistant(false)}
+                    projectContext={{
+                        nodes,
+                        edges,
+                        projectName,
+                    }}
+                    onAddComponent={(suggestion) => {
+                        // Add suggested component to canvas
+                        const newNode = {
+                            id: `${suggestion.type}-${Date.now()}`,
+                            type: 'daqNode',
+                            position: { x: 400, y: 300 },
+                            data: {
+                                label: suggestion.name,
+                                componentType: suggestion.type,
+                                category: suggestion.category,
+                                icon: suggestion.icon,
+                                inputs: [],
+                                outputs: [],
+                                properties: suggestion.properties || {},
+                            },
+                        }
+                        setNodes(nds => [...nds, newNode])
+                        showToast(`已添加 ${suggestion.name}`, 'success')
+                    }}
+                    onApplyCode={(code, nodeId) => {
+                        // Apply generated code to custom script node
+                        if (nodeId) {
+                            setNodes(nds => nds.map(n => {
+                                if (n.id === nodeId) {
+                                    return {
+                                        ...n,
+                                        data: {
+                                            ...n.data,
+                                            properties: {
+                                                ...n.data.properties,
+                                                generatedCode: code,
+                                            }
                                         }
                                     }
                                 }
-                            }
-                            return n
-                        }))
-                    }
-                    showToast('代码已应用', 'success')
-                }}
-            />
+                                return n
+                            }))
+                        }
+                        showToast('代码已应用', 'success')
+                    }}
+                />
+            </Suspense>
 
             {/* Git Panel */}
-            <GitPanel
-                isOpen={showGitPanel}
-                onClose={() => setShowGitPanel(false)}
-            />
-        </div>
+            <Suspense fallback={null}>
+                <GitPanel
+                    isOpen={showGitPanel}
+                    onClose={() => setShowGitPanel(false)}
+                />
+            </Suspense>
+        </div >
     )
 }
 
 export default function AppWrapper() {
     return (
         <ReactFlowProvider>
-            <App />
+            <I18nProvider>
+                <App />
+            </I18nProvider>
         </ReactFlowProvider>
     )
 }

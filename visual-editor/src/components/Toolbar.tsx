@@ -9,11 +9,51 @@ interface ToolbarProps {
     csvPath?: string
     onDemoMode?: () => void
     isDemoMode?: boolean
+    onUndo?: () => void
+    onRedo?: () => void
+    canUndo: boolean
+    canRedo: boolean
 }
 
-const Toolbar = ({ onExport, onImport, onCompile, onDelete, hasSelection, csvPath, onDemoMode, isDemoMode }: ToolbarProps) => {
+const Toolbar = ({
+    onExport,
+    onImport,
+    onCompile,
+    onDelete,
+    hasSelection,
+    csvPath,
+    onDemoMode,
+    isDemoMode,
+    onUndo,
+    onRedo,
+    canUndo,
+    canRedo
+}: ToolbarProps) => {
     return (
         <div className="canvas-toolbar">
+            {onUndo && (
+                <button
+                    className="toolbar-btn"
+                    onClick={onUndo}
+                    disabled={!canUndo}
+                    style={{ opacity: canUndo ? 1 : 0.5 }}
+                    title="Undo (Ctrl+Z)"
+                >
+                    ↩️
+                </button>
+            )}
+            {onRedo && (
+                <button
+                    className="toolbar-btn"
+                    onClick={onRedo}
+                    disabled={!canRedo}
+                    style={{ opacity: canRedo ? 1 : 0.5, marginRight: 10 }}
+                    title="Redo (Ctrl+Y)"
+                >
+                    ↪️
+                </button>
+            )}
+
             <button className="toolbar-btn primary" onClick={onExport}>
                 💾 Export Project
             </button>
